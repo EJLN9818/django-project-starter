@@ -17,8 +17,9 @@ This repository provides a template and a command-line tool to quickly start Dja
    ```sh
    git clone https://github.com/your_username/django-project-starter.git
    cd django-project-starter
-Run the configuration script:
-python3 create_project.py
+2. Run the configuration script:
+   ```sh
+   python3 create_project.py
 
 Follow the on-screen instructions to complete the project setup.
 
