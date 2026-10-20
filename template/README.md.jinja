@@ -1,0 +1,56 @@
+# {{ project_name }}
+
+A Django project generated with
+[django-project-starter](https://github.com/your_username/django-project-starter).
+
+## Configuration
+
+- **Project name:** {{ project_name }}
+- **Slug:** {{ project_slug }}
+- **Port:** {{ port }}
+- **Database:** {{ database }}
+- **Django:** {{ django_version }}
+- **Python:** {{ python_version }}
+
+## Getting started
+
+### With Docker (recommended)
+
+```bash
+cp .env.example .env   # then edit the secrets
+docker compose up --build
+```
+
+The app will be available at <http://localhost:{{ port }}>.
+
+### Local development
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+{%- if include_precommit %}
+pip install pre-commit && pre-commit install
+{%- endif %}
+
+python backend/manage.py migrate
+python backend/manage.py runserver
+```
+
+## Layout
+
+```
+{{ project_slug }}/
+├── backend/          # Django project code
+├── data/             # SQLite database files
+├── docs/             # Documentation
+├── static/           # Collected static files
+├── Dockerfile
+├── docker-compose.yml
+├── entrypoint.sh
+├── requirements.txt
+├── .env.example
+├── .editorconfig
+├── pyproject.toml    # ruff / black / pytest config
+└── .pre-commit-config.yaml
+```

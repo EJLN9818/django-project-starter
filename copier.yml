@@ -1,0 +1,115 @@
+# Copier configuration for the Django Project Starter template.
+# Docs: https://copier.readthedocs.io/
+_min_copier_version: "9.0.0"
+_subdirectory: template
+# Re-render the generated project when the template is updated via `copier update`.
+_answers_file: .copier-answers.yml
+
+project_name:
+  type: str
+  help: The human-readable name of the project.
+  placeholder: "My Awesome Project"
+  validator: >-
+    {% if not (project_name | trim) %}
+    Project name cannot be empty.
+    {% endif %}
+
+project_slug:
+  type: str
+  help: >-
+    The project slug. Used for Python packages, Docker service names and
+    directory names. Must be lowercase, alphanumeric and hyphen/underscore free.
+  default: "{{ project_name | lower | replace(' ', '-') | replace('_', '-') | regex_replace('[^a-z0-9-]', '') }}"
+  validator: >-
+    {% if not (project_slug | regex_search('^[a-z][a-z0-9-]*$')) %}
+    Slug must start with a letter and contain only lowercase letters, digits and hyphens.
+    {% endif %}
+
+port:
+  type: int
+  help: The port the application will be exposed on.
+  default: 8000
+  validator: >-
+    {% if not (1 <= port <= 65535) %}
+    Port must be between 1 and 65535.
+    {% endif %}
+
+database:
+  type: str
+  help: Which database backend to use.
+  choices:
+    PostgreSQL: postgresql
+    SQLite: sqlite
+  default: postgresql
+
+postgres_db:
+  type: str
+  help: PostgreSQL database name.
+  default: "{{ project_slug | replace('-', '_') }}"
+  when: "{{ database == 'postgresql' }}"
+
+postgres_user:
+  type: str
+  help: PostgreSQL username.
+  default: "{{ project_slug | replace('-', '_') }}"
+  when: "{{ database == 'postgresql' }}"
+
+postgres_password:
+  type: str
+  help: PostgreSQL password. Change it in production!
+  default: password
+  secret: true
+  when: "{{ database == 'postgresql' }}"
+
+django_version:
+  type: str
+  help: The Django version to pin.
+  default: "5.1.5"
+
+# Computed: the Python package name (slug with underscores, since hyphens are
+# not valid in Python identifiers).
+package_name:
+  type: str
+  default: "{{ project_slug | replace('-', '_') }}"
+  when: false
+
+python_version:
+  type: str
+  help: The Python version used in the Docker image.
+  default: "3.11"
+
+include_precommit:
+  type: bool
+  help: Include pre-commit, ruff and black configuration?
+  default: true
+
+init_git:
+  type: bool
+  help: Initialize a git repository with an initial commit?
+  default: true
+
+# Tasks run after the project is generated.
+_tasks:
+  - "python -c \"import os;p='entrypoint.sh';os.path.exists(p) and os.chmod(p, 0o755)\""
+  - "{% if init_git %}python -c \"import subprocess as s;s.run(['git','init','-q']);s.run(['git','add','-A']);s.run(['git','commit','-q','-m','Initial commit from django-project-starter'])\"{% endif %}"
+
+_message_after_copy: |
+  Project "{{ project_name }}" created successfully!
+
+  Next steps:
+    cd {{ _copier_conf.dst_path }}
+    cp .env.example .env        # then edit the secrets
+    docker compose up --build
+
+  {% if include_precommit %}
+  For local development:
+    python -m venv .venv && source .venv/bin/activate
+    pip install -r requirements.txt
+    pip install pre-commit && pre-commit install
+  {% else %}
+  For local development:
+    python -m venv .venv && source .venv/bin/activate
+    pip install -r requirements.txt
+  {% endif %}
+
+  Happy hacking!

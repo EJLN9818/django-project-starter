@@ -1,0 +1,35 @@
+FROM python:{{ python_version }}-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+WORKDIR /app
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+# Non-root user with a writable working area
+RUN useradd --create-home --shell /bin/bash app \
+    && mkdir -p /app/static /app/data \
+    && chown -R app:app /app
+
+# Application code
+COPY --chown=app:app entrypoint.sh /entrypoint.sh
+COPY --chown=app:app backend /app/backend
+RUN chmod +x /entrypoint.sh
+
+USER app
+
+EXPOSE {{ port }}
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["gunicorn", "backend.{{ package_name }}.wsgi:application", "--bind", "0.0.0.0:{{ port }}"]

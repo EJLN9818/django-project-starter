@@ -1,0 +1,11 @@
+Django=={{ django_version }}
+asgiref==3.8.1
+sqlparse==0.5.3
+django-extensions==3.2.3
+django-environ==0.11.2
+jsonschema==4.23.0
+requests==2.32.3
+gunicorn==21.2.0
+{%- if database == 'postgresql' %}
+psycopg2-binary==2.9.9
+{%- endif %}

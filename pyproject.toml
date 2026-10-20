@@ -1,0 +1,29 @@
+[project]
+name = "django-project-starter"
+version = "0.2.0"
+description = "A Copier template for production-ready Django projects"
+requires-python = ">=3.10"
+dependencies = ["copier>=9.0.0"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.black]
+line-length = 100
