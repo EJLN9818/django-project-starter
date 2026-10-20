@@ -90,15 +90,51 @@ my-project/
 └── README.md
 ```
 
+## Updating a generated project
+
+When this template receives improvements, you can pull them into an existing
+project:
+
+```bash
+cd my-project
+copier update
+```
+
+Copier will show you a diff for each changed file. You can accept, reject, or
+edit each hunk. After resolving conflicts, commit the changes.
+
+### Answer file
+
+A `.copier-answers.yml` file is committed to your project. It stores the
+answers you gave during generation (except secrets). **Do not delete it** —
+`copier update` needs it to compute the diff correctly.
+
+### Secrets
+
+Secret answers (like `postgres_password`) are **not** stored in the answers
+file. If you change the database type to PostgreSQL after an update, run:
+
+```bash
+cp .env.example .env   # then fill in the secrets
+```
+
 ## Development of the template itself
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate       # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
+pre-commit install
+```
 
+```bash
 # Run the tests
 pytest
+
+# Lint and format
+ruff check --fix .
+ruff format .
+black .
 ```
 
 The test suite renders the template into a temporary directory and asserts on

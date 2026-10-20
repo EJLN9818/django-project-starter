@@ -8,6 +8,9 @@ dependencies = ["copier>=9.0.0"]
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.4",
+    "ruff>=0.8.4",
+    "black>=24.10.0",
+    "pre-commit>=4.0.1",
 ]
 
 [build-system]
@@ -21,9 +24,16 @@ python_files = ["test_*.py"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+exclude = ["template", ".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.black]
 line-length = 100
+exclude = '''
+/(
+    | template
+    | \.venv
+)/
+'''

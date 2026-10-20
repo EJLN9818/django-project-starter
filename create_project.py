@@ -23,6 +23,7 @@ from pathlib import Path
 
 TEMPLATE_DIR = Path(__file__).resolve().parent
 
+
 # Minimal custom logger with clear, prefixed levels.
 class Log:
     @staticmethod
@@ -98,7 +99,11 @@ def parse_args() -> argparse.Namespace:
         "--output",
         help="Destination directory for the generated project.",
     )
-    parser.add_argument("-n", "--name", help="Project name (implies non-interactive for this field).")
+    parser.add_argument(
+        "-n",
+        "--name",
+        help="Project name (implies non-interactive for this field).",
+    )
     parser.add_argument("-s", "--slug", help="Project slug (defaults to a slugified name).")
     parser.add_argument("-p", "--port", type=int, help="Exposure port.")
     parser.add_argument(
