@@ -4,6 +4,9 @@ A [Copier](https://copier.readthedocs.io/) template that scaffolds production-re
 Django projects with Docker, environment-based configuration and code-quality
 tooling baked in.
 
+**This template is for local/team use.** Clone the repo and generate projects
+directly from your local copy — no need to publish to PyPI or GitHub.
+
 ## Why Copier?
 
 Unlike a one-shot shell script, Copier keeps the template and the generated
@@ -33,43 +36,42 @@ copier update
 - Python 3.10+
 - [Copier](https://copier.readthedocs.io/) 9+ (`pip install copier`)
 
-## Usage
+## Usage (Local)
 
-### Recommended: Copier directly
+Clone this repository once, then generate as many projects as you need:
 
 ```bash
+git clone <this-repo-url> django-project-starter
+cd django-project-starter
 pip install copier
-copier copy gh:your_username/django-project-starter ./my-project
 ```
 
-You can also copy from a local checkout:
+### Generate a new project (interactive)
 
 ```bash
-copier copy ./django-project-starter ./my-project
+copier copy ./django-project-starter ../my-new-project
 ```
 
-### Convenience wrapper
-
-The bundled `create_project.py` wraps Copier with a friendlier CLI:
+Or use the convenience wrapper with a friendlier CLI:
 
 ```bash
-python create_project.py -o ./my-project
+python ./django-project-starter/create_project.py -o ../my-new-project
 ```
 
-Non-interactive generation (great for CI):
+### Generate a new project (non-interactive, great for CI/scripts)
 
 ```bash
-python create_project.py \
+python ./django-project-starter/create_project.py \
   --no-interactive \
   --name "My Project" \
   --port 8000 \
   --database postgresql \
-  --output ./my-project
+  --output ../my-new-project
 ```
 
 Run `python create_project.py --help` for all options.
 
-## Generated project
+## Generated project structure
 
 ```
 my-project/
@@ -92,16 +94,15 @@ my-project/
 
 ## Updating a generated project
 
-When this template receives improvements, you can pull them into an existing
-project:
+When you improve this template, pull the changes into an existing project:
 
 ```bash
 cd my-project
 copier update
 ```
 
-Copier will show you a diff for each changed file. You can accept, reject, or
-edit each hunk. After resolving conflicts, commit the changes.
+Copier will show you a diff for each changed file. Accept, reject, or edit
+each hunk, then commit the changes.
 
 ### Answer file
 
@@ -121,6 +122,7 @@ cp .env.example .env   # then fill in the secrets
 ## Development of the template itself
 
 ```bash
+cd django-project-starter
 python -m venv .venv
 source .venv/bin/activate       # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
@@ -139,11 +141,6 @@ black .
 
 The test suite renders the template into a temporary directory and asserts on
 the resulting files for both database backends.
-
-## Contributions
-
-Contributions are welcome! If you have suggestions or find a bug, please open an
-issue or submit a pull request.
 
 ## License
 
