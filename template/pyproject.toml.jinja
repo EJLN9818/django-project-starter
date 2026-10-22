@@ -1,15 +1,4 @@
-[project]
-name = "{{ project_slug }}"
-version = "0.1.0"
-description = "{{ project_name }}"
-requires-python = ">={{ python_version }}"
-{%- if include_precommit %}
-dependencies = [
-    "ruff>=0.8.4",
-    "black>=24.10.0",
-    "pre-commit>=4.0.1",
-]
-{%- endif %}
+# Tool configuration only. Runtime dependencies live in requirements.txt.
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "backend.{{ package_name }}.settings"

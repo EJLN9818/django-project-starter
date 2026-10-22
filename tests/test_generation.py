@@ -12,7 +12,7 @@ BASE_DATA = {
     "postgres_db": "demo_project",
     "postgres_user": "demo_project",
     "postgres_password": "secret",
-    "django_version": "5.1.5",
+    "django_version": "5.2.18",
     "python_version": "3.11",
     "include_precommit": True,
     "init_git": False,

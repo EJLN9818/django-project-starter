@@ -64,7 +64,7 @@ postgres_password:
 django_version:
   type: str
   help: The Django version to pin.
-  default: "5.1.5"
+  default: "5.2.18"
 
 # Computed: the Python package name (slug with underscores, since hyphens are
 # not valid in Python identifiers).
@@ -98,7 +98,7 @@ _message_after_copy: |
 
   Next steps:
     cd {{ _copier_conf.dst_path }}
-    cp .env.example .env        # then edit the secrets
+    Copy .env.example to .env, then edit the secrets.
     docker compose up --build
 
   {% if include_precommit %}

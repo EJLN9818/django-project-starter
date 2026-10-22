@@ -1,21 +1,5 @@
-[project]
-name = "django-project-starter"
-version = "0.2.0"
-description = "A Copier template for production-ready Django projects"
-requires-python = ">=3.10"
-dependencies = ["copier>=9.0.0"]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.3.4",
-    "ruff>=0.8.4",
-    "black>=24.10.0",
-    "pre-commit>=4.0.1",
-]
-
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
+# Tool configuration only. Dependencies live in requirements-dev.txt.
+# (This repo is a local template, not a published package.)
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
