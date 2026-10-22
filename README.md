@@ -49,19 +49,19 @@ pip install copier
 ### Generate a new project (interactive)
 
 ```bash
-copier copy ./django-project-starter ../my-new-project
+copier copy . ../my-new-project
 ```
 
 Or use the convenience wrapper with a friendlier CLI:
 
 ```bash
-python ./django-project-starter/create_project.py -o ../my-new-project
+python create_project.py -o ../my-new-project
 ```
 
 ### Generate a new project (non-interactive, great for CI/scripts)
 
 ```bash
-python ./django-project-starter/create_project.py \
+python create_project.py \
   --no-interactive \
   --name "My Project" \
   --port 8000 \
