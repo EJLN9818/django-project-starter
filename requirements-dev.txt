@@ -1,5 +1,5 @@
 # Dependencies for developing the template itself (not for generated projects).
-copier>=9.0.0
+copier>=9.19.1
 pytest>=8.3.4
 ruff>=0.8.4
 black>=24.10.0

@@ -20,8 +20,20 @@ cp .env.example .env
 # Windows PowerShell: Copy-Item .env.example .env
 ```
 
-Then edit `.env` and set `SECRET_KEY` (and `POSTGRES_PASSWORD` if you use
-PostgreSQL).
+Then edit `.env`:
+
+- Set `SECRET_KEY` to a random value of at least 50 characters. Generate one
+  with:
+
+  ```bash
+  python -c "import secrets; print(secrets.token_urlsafe(50))"
+  ```
+
+{%- if database == 'postgresql' %}
+
+- Set `POSTGRES_PASSWORD`. Do this **before** the first `docker compose up`,
+  because PostgreSQL only applies it when the volume is initialized.
+{%- endif %}
 
 ### With Docker (recommended)
 
@@ -29,7 +41,15 @@ PostgreSQL).
 docker compose up --build
 ```
 
-The app will be available at <http://localhost:{{ port }}>.
+Docker Compose runs with `DEBUG=False`. The app will be available at
+<http://localhost:{{ port }}>.
+
+Static files are collected during the image build. Rebuild the image after
+changing static files:
+
+```bash
+docker compose up --build
+```
 
 ### Local development
 
@@ -45,13 +65,23 @@ python backend/manage.py migrate
 python backend/manage.py runserver
 ```
 
+{%- if database == 'postgresql' %}
+
+`.env.example` uses `DEBUG=True` and `DB_HOST=localhost`, so PostgreSQL works
+with a local server. Docker Compose overrides `DEBUG=False` and `DB_HOST=db`.
+{%- else %}
+
+`.env.example` uses `DEBUG=True` for local development. Docker Compose
+overrides it to `DEBUG=False`.
+{%- endif %}
+
 Create an admin user:
 
 ```bash
 python backend/manage.py createsuperuser
 ```
 
-Then open <http://localhost:8000/admin/>.
+Then open <http://localhost:{{ port }}/admin/>.
 
 ## Make targets
 
@@ -71,10 +101,10 @@ make fmt         # auto-fix
 
 ```bash
 pytest
-{%- if include_precommit %}
-
 ruff check .
 black --check .
+{%- if include_precommit %}
+pre-commit run --all-files
 {%- endif %}
 ```
 
@@ -87,6 +117,22 @@ another device on your network, add your LAN IP or hostname to the
 ```
 ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.50
 ```
+
+## Troubleshooting
+
+- **`ImproperlyConfigured: Set a strong SECRET_KEY`** — edit `.env` and set a
+  random `SECRET_KEY`.
+{%- if database == 'postgresql' %}
+- **`could not translate host name "db"`** — you are running outside Docker.
+  Set `DB_HOST=localhost` in `.env` (the default in `.env.example`).
+- **Changed `POSTGRES_PASSWORD` after the first start** — PostgreSQL keeps the
+  password from the initial volume. Either run `docker compose down -v` (this
+  deletes the database) or change the password inside PostgreSQL with
+  `ALTER USER`.
+{%- endif %}
+- **Static files look stale in Docker** — they are collected at image build
+  time; rebuild with `docker compose up --build`.
+- **Missing `.env`** — copy `.env.example` to `.env`.
 
 ## Layout
 
@@ -104,6 +150,13 @@ ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.50
 ├── Makefile
 ├── .env.example
 ├── .editorconfig
+├── .gitattributes
+├── .gitignore
+├── .dockerignore
+├── .copier-answers.yml
 ├── pyproject.toml    # ruff / black / pytest config
-└── .pre-commit-config.yaml
+{%- if include_precommit %}
+├── .pre-commit-config.yaml
+{%- endif %}
+└── README.md
 ```

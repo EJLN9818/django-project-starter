@@ -18,7 +18,7 @@ def _has_copier() -> bool:
 
 requires_copier = pytest.mark.skipif(
     not _has_copier(),
-    reason="Copier is not installed; run 'pip install -e .[dev]'.",
+    reason="Copier is not installed; run 'pip install -r requirements-dev.txt'.",
 )
 
 

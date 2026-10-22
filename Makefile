@@ -25,4 +25,4 @@ fmt: ## Auto-fix linting and formatting
 > black .
 
 generate: ## Generate a project: make generate DEST=../my-project
-> copier copy . $(DEST)
+> copier copy "$(CURDIR)" "$(DEST)"

@@ -1,0 +1,15 @@
+# Normalize text files to LF even when checked out on Windows.
+* text=auto eol=lf
+
+# Windows scripts need CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files must not be normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary

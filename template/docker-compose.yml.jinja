@@ -14,8 +14,10 @@ services:
     env_file:
       - .env
     environment:
-      - DJANGO_SETTINGS_MODULE=backend.{{ package_name }}.settings
+      DJANGO_SETTINGS_MODULE: backend.{{ package_name }}.settings
+      DEBUG: "False"
 {%- if database == 'postgresql' %}
+      DB_HOST: db
     depends_on:
       db:
         condition: service_healthy

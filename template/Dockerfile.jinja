@@ -33,7 +33,9 @@ RUN chmod +x /entrypoint.sh
 USER app
 
 # Collect static files at build time so the image is self-contained.
-RUN SECRET_KEY=build POSTGRES_PASSWORD=build \
+# This is a build-only placeholder, never used at runtime.
+RUN SECRET_KEY=build-only-secret-not-used-at-runtime-0123456789abcdefghij \
+    POSTGRES_PASSWORD=build \
     python backend/manage.py collectstatic --noinput
 
 EXPOSE {{ port }}

@@ -7,6 +7,7 @@ variables (loaded from a local .env file when present).
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 # ---------------------------------------------------------------------------
 # Paths and environment
@@ -17,14 +18,24 @@ env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
 )
-# Load .env from the project root if it exists.
-environ.Env.read_env(BASE_DIR.parent / ".env")
+# Load .env from the project root if it exists. `utf-8-sig` tolerates the BOM
+# that Windows editors sometimes add to the first line.
+environ.Env.read_env(BASE_DIR.parent / ".env", encoding="utf-8-sig")
 
+DEBUG = env("DEBUG")
 SECRET_KEY = env(
     "SECRET_KEY",
     default="django-insecure-change-me-in-production",
 )
-DEBUG = env("DEBUG")
+if not DEBUG and (
+    SECRET_KEY.startswith("django-insecure-")
+    or len(SECRET_KEY) < 50
+    or len(set(SECRET_KEY)) < 5
+):
+    raise ImproperlyConfigured(
+        "Set a strong SECRET_KEY (at least 50 characters) in .env. Generate one with: "
+        'python -c "import secrets; print(secrets.token_urlsafe(50))"'
+    )
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 # ---------------------------------------------------------------------------
@@ -86,7 +97,7 @@ DATABASES = {
         "NAME": env("POSTGRES_DB", default="{{ postgres_db }}"),
         "USER": env("POSTGRES_USER", default="{{ postgres_user }}"),
         "PASSWORD": env("POSTGRES_PASSWORD"),
-        "HOST": env("DB_HOST", default="db"),
+        "HOST": env("DB_HOST", default="localhost"),
         "PORT": env("DB_PORT", default="5432"),
     }
 }

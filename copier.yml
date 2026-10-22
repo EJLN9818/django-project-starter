@@ -1,6 +1,6 @@
 # Copier configuration for the Django Project Starter template.
 # Docs: https://copier.readthedocs.io/
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.19.1"
 _subdirectory: template
 # Re-render the generated project when the template is updated via `copier update`.
 _answers_file: .copier-answers.yml
@@ -18,7 +18,8 @@ project_slug:
   type: str
   help: >-
     The project slug. Used for Python packages, Docker service names and
-    directory names. Must be lowercase, alphanumeric and hyphen/underscore free.
+    directory names. Must start with a letter and contain only lowercase
+    letters, digits and hyphens.
   default: "{{ project_name | lower | replace(' ', '-') | replace('_', '-') | regex_replace('[^a-z0-9-]', '') }}"
   validator: >-
     {% if not (project_slug | regex_search('^[a-z][a-z0-9-]*$')) %}
@@ -54,17 +55,14 @@ postgres_user:
   default: "{{ project_slug | replace('-', '_') }}"
   when: "{{ database == 'postgresql' }}"
 
-postgres_password:
-  type: str
-  help: PostgreSQL password. Change it in production!
-  default: password
-  secret: true
-  when: "{{ database == 'postgresql' }}"
-
 django_version:
   type: str
   help: The Django version to pin.
   default: "5.2.18"
+  validator: >-
+    {% if not (django_version | regex_search('^[0-9]+[.][0-9]+([.][0-9]+)?$')) %}
+    Django version must look like 5.2 or 5.2.18.
+    {% endif %}
 
 # Computed: the Python package name (slug with underscores, since hyphens are
 # not valid in Python identifiers).
@@ -77,6 +75,10 @@ python_version:
   type: str
   help: The Python version used in the Docker image.
   default: "3.13"
+  validator: >-
+    {% if not (python_version | regex_search('^[0-9]+[.][0-9]+$')) %}
+    Python version must look like 3.13.
+    {% endif %}
 
 include_precommit:
   type: bool
@@ -88,16 +90,19 @@ init_git:
   help: Initialize a git repository with an initial commit?
   default: true
 
-# Tasks run after the project is generated.
+# Tasks run after the project is generated. `when` is false on `copier update`,
+# so updating never creates a second initial commit.
 _tasks:
-  - "{% if init_git %}python -c \"import subprocess as s;s.run(['git','init','-q']);s.run(['git','add','-A']);s.run(['git','commit','-q','-m','Initial commit from django-project-starter'])\"{% endif %}"
+  - command: >-
+      "{{ _copier_python }}" -c "import subprocess as s;s.run(['git','init','-q','-b','main']);s.run(['git','add','-A']);s.run(['git','commit','-q','-m','Initial commit from django-project-starter'])"
+    when: "{{ _copier_operation == 'copy' and init_git }}"
 
 _message_after_copy: |
   Project "{{ project_name }}" created successfully!
 
   Next steps:
-    cd {{ _copier_conf.dst_path }}
-    Copy .env.example to .env, then edit the secrets.
+    cd "{{ _copier_conf.dst_path }}"
+    Copy .env.example to .env, then set SECRET_KEY (and POSTGRES_PASSWORD for PostgreSQL).
     docker compose up --build
 
   {% if include_precommit %}
