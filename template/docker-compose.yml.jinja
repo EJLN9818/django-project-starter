@@ -6,7 +6,6 @@ services:
       ["gunicorn", "backend.{{ package_name }}.wsgi:application", "--bind", "0.0.0.0:{{ port }}"]
     volumes:
       - ./backend:/app/backend
-      - ./static:/app/static
 {%- if database == 'sqlite' %}
       - ./data:/app/data
 {%- endif %}

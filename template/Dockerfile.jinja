@@ -6,10 +6,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# System dependencies
+# System dependencies (libpq is only needed for PostgreSQL)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+{%- if database == 'postgresql' %}
     libpq-dev \
+{%- endif %}
     && rm -rf /var/lib/apt/lists/*
 
 # Python dependencies
@@ -17,8 +19,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# Non-root user with a writable working area
-RUN useradd --create-home --shell /bin/bash app \
+# Non-root user with a fixed UID/GID so bind mounts stay writable on Linux.
+RUN groupadd --gid 1000 app \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash app \
     && mkdir -p /app/static /app/data \
     && chown -R app:app /app
 
@@ -28,6 +31,10 @@ COPY --chown=app:app backend /app/backend
 RUN chmod +x /entrypoint.sh
 
 USER app
+
+# Collect static files at build time so the image is self-contained.
+RUN SECRET_KEY=build POSTGRES_PASSWORD=build \
+    python backend/manage.py collectstatic --noinput
 
 EXPOSE {{ port }}
 

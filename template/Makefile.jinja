@@ -1,0 +1,58 @@
+# Convenience targets for local development. Requires GNU make.
+# (On Windows, use Git Bash or WSL.)
+PYTHON ?= python
+MANAGE = $(PYTHON) backend/manage.py
+COMPOSE ?= docker compose
+
+.DEFAULT_GOAL := help
+.RECIPEPREFIX = >
+
+.PHONY: help up down build logs ps migrate makemigrations shell dbshell \
+        superuser test lint fmt collectstatic
+
+help: ## Show this help
+> @grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+
+up: ## Build and start the stack in the background
+> $(COMPOSE) up -d --build
+
+down: ## Stop the stack
+> $(COMPOSE) down
+
+build: ## Build the images
+> $(COMPOSE) build
+
+logs: ## Follow container logs
+> $(COMPOSE) logs -f
+
+ps: ## Show running services
+> $(COMPOSE) ps
+
+migrate: ## Apply database migrations
+> $(MANAGE) migrate
+
+makemigrations: ## Create new migrations
+> $(MANAGE) makemigrations
+
+shell: ## Open the Django shell
+> $(MANAGE) shell
+
+dbshell: ## Open the database shell
+> $(MANAGE) dbshell
+
+superuser: ## Create an admin user
+> $(MANAGE) createsuperuser
+
+test: ## Run the test suite
+> pytest
+
+lint: ## Check linting and formatting
+> ruff check .
+> black --check .
+
+fmt: ## Auto-fix linting and formatting
+> ruff check --fix .
+> black .
+
+collectstatic: ## Collect static files
+> $(MANAGE) collectstatic --noinput

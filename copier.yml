@@ -76,7 +76,7 @@ package_name:
 python_version:
   type: str
   help: The Python version used in the Docker image.
-  default: "3.11"
+  default: "3.13"
 
 include_precommit:
   type: bool
@@ -90,7 +90,6 @@ init_git:
 
 # Tasks run after the project is generated.
 _tasks:
-  - "python -c \"import os;p='entrypoint.sh';os.path.exists(p) and os.chmod(p, 0o755)\""
   - "{% if init_git %}python -c \"import subprocess as s;s.run(['git','init','-q']);s.run(['git','add','-A']);s.run(['git','commit','-q','-m','Initial commit from django-project-starter'])\"{% endif %}"
 
 _message_after_copy: |
@@ -104,12 +103,12 @@ _message_after_copy: |
   {% if include_precommit %}
   For local development:
     python -m venv .venv && source .venv/bin/activate
-    pip install -r requirements.txt
-    pip install pre-commit && pre-commit install
+    pip install -r requirements-dev.txt
+    pre-commit install
   {% else %}
   For local development:
     python -m venv .venv && source .venv/bin/activate
-    pip install -r requirements.txt
+    pip install -r requirements-dev.txt
   {% endif %}
 
   Happy hacking!

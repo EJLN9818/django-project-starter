@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from conftest import requires_copier
 
 BASE_DATA = {
@@ -13,7 +14,7 @@ BASE_DATA = {
     "postgres_user": "demo_project",
     "postgres_password": "secret",
     "django_version": "5.2.18",
-    "python_version": "3.11",
+    "python_version": "3.13",
     "include_precommit": True,
     "init_git": False,
 }
@@ -23,6 +24,8 @@ COMMON_FILES = [
     "docker-compose.yml",
     "entrypoint.sh",
     "requirements.txt",
+    "requirements-dev.txt",
+    "Makefile",
     "pyproject.toml",
     ".editorconfig",
     ".env.example",
@@ -36,7 +39,16 @@ COMMON_FILES = [
     "backend/demo_project/wsgi.py",
     "backend/demo_project/asgi.py",
     "backend/demo_project/urls.py",
+    "backend/demo_project/test_smoke.py",
 ]
+
+
+def _sqlite_data(**overrides):
+    """BASE_DATA with the PostgreSQL-only answers removed."""
+    data = {**BASE_DATA, "database": "sqlite", **overrides}
+    for key in ("postgres_db", "postgres_user", "postgres_password"):
+        data.pop(key, None)
+    return data
 
 
 @requires_copier
@@ -58,6 +70,7 @@ def test_postgresql_configuration(copier_copy):
     settings = (dest / "backend/demo_project/settings.py").read_text()
     assert "django.db.backends.postgresql" in settings
     assert "environ.Env" in settings
+    assert "whitenoise.middleware.WhiteNoiseMiddleware" in settings
 
     compose = (dest / "docker-compose.yml").read_text()
     assert "postgres:16-alpine" in compose
@@ -65,6 +78,7 @@ def test_postgresql_configuration(copier_copy):
 
     requirements = (dest / "requirements.txt").read_text()
     assert "psycopg2-binary" in requirements
+    assert "whitenoise" in requirements
 
     env_example = (dest / ".env.example").read_text()
     assert "POSTGRES_DB=demo_project" in env_example
@@ -72,12 +86,7 @@ def test_postgresql_configuration(copier_copy):
 
 @requires_copier
 def test_sqlite_configuration(copier_copy):
-    data = {**BASE_DATA, "database": "sqlite"}
-    # Drop postgres-only answers so Copier does not warn about unused ones.
-    for key in ("postgres_db", "postgres_user", "postgres_password"):
-        data.pop(key)
-
-    dest = copier_copy(data)
+    dest = copier_copy(_sqlite_data())
 
     settings = (dest / "backend/demo_project/settings.py").read_text()
     assert "django.db.backends.sqlite3" in settings
@@ -88,6 +97,13 @@ def test_sqlite_configuration(copier_copy):
 
     requirements = (dest / "requirements.txt").read_text()
     assert "psycopg2-binary" not in requirements
+
+
+@requires_copier
+def test_env_example_enables_debug_for_local(copier_copy):
+    dest = copier_copy(BASE_DATA)
+    env_example = (dest / ".env.example").read_text()
+    assert "DEBUG=True" in env_example
 
 
 @requires_copier
@@ -141,3 +157,34 @@ def test_wsgi_and_settings_paths_are_consistent(copier_copy):
     # The Python package directory must not contain a hyphen.
     assert (dest / "backend/demo_project").is_dir()
     assert not (dest / "backend/demo-project").exists()
+
+
+@requires_copier
+def test_generated_python_compiles(copier_copy):
+    """Every rendered .py file must be syntactically valid."""
+    dest = copier_copy(BASE_DATA)
+
+    py_files = list((dest / "backend").rglob("*.py"))
+    assert py_files, "no Python files rendered"
+
+    for path in py_files:
+        source = path.read_text(encoding="utf-8")
+        compile(source, str(path), "exec")
+
+
+@pytest.mark.parametrize("database", ["postgresql", "sqlite"])
+@requires_copier
+def test_compose_is_valid_yaml(copier_copy, database):
+    yaml = pytest.importorskip("yaml")
+
+    if database == "sqlite":
+        data = _sqlite_data(project_slug="compose-sqlite")
+    else:
+        data = {**BASE_DATA, "database": "postgresql", "project_slug": "compose-postgres"}
+
+    dest = copier_copy(data)
+    parsed = yaml.safe_load((dest / "docker-compose.yml").read_text())
+
+    assert "services" in parsed
+    assert "web" in parsed["services"]
+    assert ("db" in parsed["services"]) is (database == "postgresql")

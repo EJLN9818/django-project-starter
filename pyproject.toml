@@ -8,16 +8,11 @@ python_files = ["test_*.py"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-exclude = ["template", ".venv"]
+extend-exclude = ["template"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.black]
 line-length = 100
-exclude = '''
-/(
-    | template
-    | \.venv
-)/
-'''
+extend-exclude = "template/"

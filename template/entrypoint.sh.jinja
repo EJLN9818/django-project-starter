@@ -4,8 +4,5 @@ set -e
 echo "Applying database migrations..."
 python backend/manage.py migrate --noinput
 
-echo "Collecting static files..."
-python backend/manage.py collectstatic --noinput
-
 echo "Starting application..."
 exec "$@"

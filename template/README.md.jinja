@@ -1,7 +1,6 @@
 # {{ project_name }}
 
-A Django project generated with
-[django-project-starter](https://github.com/your_username/django-project-starter).
+A Django project generated with **django-project-starter**.
 
 ## Configuration
 
@@ -14,10 +13,19 @@ A Django project generated with
 
 ## Getting started
 
+Create your environment file first (the app reads secrets from it):
+
+```bash
+cp .env.example .env
+# Windows PowerShell: Copy-Item .env.example .env
+```
+
+Then edit `.env` and set `SECRET_KEY` (and `POSTGRES_PASSWORD` if you use
+PostgreSQL).
+
 ### With Docker (recommended)
 
 ```bash
-cp .env.example .env   # then edit the secrets
 docker compose up --build
 ```
 
@@ -28,13 +36,56 @@ The app will be available at <http://localhost:{{ port }}>.
 ```bash
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 {%- if include_precommit %}
-pip install pre-commit && pre-commit install
+pre-commit install
 {%- endif %}
 
 python backend/manage.py migrate
 python backend/manage.py runserver
+```
+
+Create an admin user:
+
+```bash
+python backend/manage.py createsuperuser
+```
+
+Then open <http://localhost:8000/admin/>.
+
+## Make targets
+
+If you have GNU make installed (Git Bash or WSL on Windows):
+
+```bash
+make help        # list all targets
+make up          # docker compose up -d --build
+make migrate     # apply migrations
+make superuser   # create an admin user
+make test        # run pytest
+make lint        # ruff + black check
+make fmt         # auto-fix
+```
+
+## Tests and linting
+
+```bash
+pytest
+{%- if include_precommit %}
+
+ruff check .
+black --check .
+{%- endif %}
+```
+
+## Accessing from another machine
+
+Django only accepts hosts listed in `ALLOWED_HOSTS`. To reach the app from
+another device on your network, add your LAN IP or hostname to the
+`ALLOWED_HOSTS` line in `.env`, for example:
+
+```
+ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.50
 ```
 
 ## Layout
@@ -44,11 +95,13 @@ python backend/manage.py runserver
 ├── backend/          # Django project code
 ├── data/             # SQLite database files
 ├── docs/             # Documentation
-├── static/           # Collected static files
+├── static/           # Collectstatic output (served by WhiteNoise)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── entrypoint.sh
 ├── requirements.txt
+├── requirements-dev.txt
+├── Makefile
 ├── .env.example
 ├── .editorconfig
 ├── pyproject.toml    # ruff / black / pytest config

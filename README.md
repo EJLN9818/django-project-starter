@@ -14,7 +14,8 @@ GitHub.
 - **PostgreSQL or SQLite**, selected interactively.
 - **Docker ready**: `Dockerfile`, `docker-compose.yml` with a PostgreSQL
   healthcheck, `entrypoint.sh` and `.dockerignore`.
-- **Non-root container** for safer runtime.
+- **Non-root container** with a fixed UID/GID.
+- **Static files served by WhiteNoise** (no extra nginx needed).
 - **Environment management**: `.env.example` + `.gitignore` (kept in sync via
   `copier update`).
 - **Code quality**: `ruff`, `black`, `pre-commit` and `.editorconfig`.
@@ -69,6 +70,8 @@ my-project/
 ├── docker-compose.yml
 ├── entrypoint.sh
 ├── requirements.txt
+├── requirements-dev.txt
+├── Makefile
 ├── pyproject.toml              # ruff / black / pytest config
 ├── .pre-commit-config.yaml
 ├── .editorconfig
@@ -111,15 +114,24 @@ pip install -r requirements-dev.txt
 pre-commit install
 ```
 
-```bash
-# Run the tests
-pytest
+Common tasks (GNU make; on Windows use Git Bash or WSL):
 
-# Lint and format
+```bash
+make test        # run the template test suite
+make lint        # ruff + black check
+make fmt         # auto-fix
+make generate DEST=../my-project   # generate a project
+```
+
+Without make:
+
+```bash
+pytest
 ruff check --fix .
-ruff format .
 black .
 ```
 
 The test suite renders the template into a temporary directory and asserts on
-the resulting files for both database backends.
+the resulting files for both database backends. It also verifies that every
+rendered Python file compiles and that both `docker-compose.yml` variants are
+valid YAML.
