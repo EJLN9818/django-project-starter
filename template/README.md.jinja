@@ -192,8 +192,9 @@ automatically. It runs the same pre-commit command in Docker before every
 - Emergency bypass: `git push --no-verify` (use it only when you understand the
   risk).
 
-If you generated this project before the hook existed, or you initialized Git
-later, enable it once:
+If you generated this project before the hook existed, follow the update
+section below to add the file and mark it executable. If you only initialized
+Git after generating the project, enable the hook once:
 
 ```bash
 git config core.hooksPath .githooks
@@ -306,8 +307,14 @@ docker compose -f docker-compose.yml -f compose.dev.yml up --build
 ```
 
 {% if include_precommit %}
-If the update adds `.githooks/pre-push` but does not enable it, run
-`git config core.hooksPath .githooks` once.
+If the update adds `.githooks/pre-push` but does not enable it, register the
+hook and mark it executable before committing:
+
+```bash
+git add .githooks/pre-push
+git update-index --chmod=+x .githooks/pre-push
+git config core.hooksPath .githooks
+```
 {% endif %}
 
 ## Troubleshooting

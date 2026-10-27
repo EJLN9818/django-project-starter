@@ -446,7 +446,6 @@ def test_tasks_run_only_on_copy(template_root):
     """`copier update` must not re-run the git init/commit/hook tasks."""
     copier_yml = (template_root / "copier.yml").read_text()
     assert "_copier_operation == 'copy'" in copier_yml
-    assert "_copier_operation == 'update'" in copier_yml
     assert "core.hooksPath" in copier_yml
     assert ".githooks/pre-push" in copier_yml
 

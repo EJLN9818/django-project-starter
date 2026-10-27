@@ -150,9 +150,11 @@ If pre-commit is enabled, the generated project also includes a tracked
 subsequent runs reuse the cache. There is no need to install pre-commit on the
 host.
 
-Existing projects created before this hook was added can enable it once with:
+Existing projects created before this hook was added can enable it with:
 
 ```bash
+git add .githooks/pre-push
+git update-index --chmod=+x .githooks/pre-push
 git config core.hooksPath .githooks
 ```
 
