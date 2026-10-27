@@ -208,9 +208,6 @@ git config --unset core.hooksPath
 
 The hook is intentionally only in the development image. The production image
 does not contain pre-commit, Ruff or pytest.
-{%- else %}
-This project was generated without pre-commit. The development image still has
-Ruff and pytest, but there is no `.pre-commit-config.yaml` or Git hook.
 {%- endif %}
 
 ## Project layout and where to change things
@@ -233,7 +230,7 @@ Ruff and pytest, but there is no `.pre-commit-config.yaml` or Git hook.
 |-- compose.dev.yml           # development overlay
 |-- entrypoint.sh             # migrations, then the requested command
 |-- requirements.txt          # production dependencies
-|-- requirements-dev.txt      # test/lint/pre-commit dependencies
+|-- requirements-dev.txt      # test/lint{% if include_precommit %}/pre-commit{% endif %} dependencies
 |-- pyproject.toml            # Ruff and pytest configuration
 |-- .env.example              # committed placeholders
 |-- .gitattributes
@@ -341,9 +338,9 @@ git config core.hooksPath .githooks
   mounted files' ownership.
 - **A new dependency is missing** - rebuild the development image with
   `docker compose -f docker-compose.yml -f compose.dev.yml up --build`.
+{% if include_precommit %}
 - **Pre-commit cannot connect to Docker** - start Docker Desktop and retry the
   push. You can also run the manual pre-commit command above.
-{% if include_precommit %}
 - **Pre-commit keeps reinstalling hooks** - the cache volume was removed with
   `docker compose ... down -v`; the next run will download the hooks again.
 {% endif %}

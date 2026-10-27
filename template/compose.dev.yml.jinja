@@ -9,14 +9,20 @@ services:
       ["python", "backend/manage.py", "runserver", "0.0.0.0:{{ port }}"]
     environment:
       DEBUG: "True"
+{%- if include_precommit %}
       PRE_COMMIT_HOME: /home/app/.cache/pre-commit
+{%- endif %}
     volumes:
-      # Mount the whole repository so Django, pytest and pre-commit can see
+      # Mount the whole repository so Django, pytest and other tools can see
       # every project file, not only the backend package.
       - .:/app
+{%- if include_precommit %}
       # Persist pre-commit hook environments between container runs.
       - precommit_cache:/home/app/.cache/pre-commit
+{%- endif %}
     restart: "no"
+{%- if include_precommit %}
 
 volumes:
   precommit_cache:
+{%- endif %}

@@ -262,6 +262,12 @@ def test_precommit_toggle(copier_copy):
     assert not (without / ".pre-commit-config.yaml").exists()
     assert not (without / ".githooks").exists()
     assert "pre-commit" not in (without / "requirements-dev.txt").read_text()
+    assert "pre-commit" not in (without / "README.md").read_text()
+
+    yaml = pytest.importorskip("yaml")
+    without_dev = yaml.safe_load((without / "compose.dev.yml").read_text())
+    assert "precommit_cache" not in (without_dev.get("volumes") or {})
+    assert "PRE_COMMIT_HOME" not in without_dev["services"]["web"]["environment"]
 
 
 @requires_copier
