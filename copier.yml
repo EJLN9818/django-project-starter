@@ -94,8 +94,24 @@ init_git:
 # so updating never creates a second initial commit.
 _tasks:
   - command: >-
-      "{{ _copier_python }}" -c "import subprocess as s;s.run(['git','init','-q','-b','main']);s.run(['git','add','-A']);s.run(['git','commit','-q','-m','Initial commit from django-project-starter'])"
+      "{{ _copier_python }}" -c "import os, stat; p = '.githooks/pre-push'; os.chmod(p, os.stat(p).st_mode | stat.S_IXUSR)"
+    when: "{{ _copier_operation == 'copy' and include_precommit }}"
+
+  - command: >-
+      "{{ _copier_python }}" -c "import subprocess as s; s.run(['git', 'init', '-q', '-b', 'main']); s.run(['git', 'add', '-A'])"
     when: "{{ _copier_operation == 'copy' and init_git }}"
+
+  - command: >-
+      "{{ _copier_python }}" -c "import subprocess as s; s.run(['git', 'update-index', '--chmod=+x', '.githooks/pre-push'])"
+    when: "{{ _copier_operation == 'copy' and init_git and include_precommit }}"
+
+  - command: >-
+      "{{ _copier_python }}" -c "import subprocess as s; s.run(['git', 'commit', '-q', '-m', 'Initial commit from django-project-starter'])"
+    when: "{{ _copier_operation == 'copy' and init_git }}"
+
+  - command: >-
+      "{{ _copier_python }}" -c "import subprocess as s; s.run(['git', 'config', 'core.hooksPath', '.githooks'])"
+    when: "{{ _copier_operation == 'copy' and init_git and include_precommit }}"
 
 _message_after_copy: |
   Project "{{ project_name }}" created successfully!
@@ -104,21 +120,28 @@ _message_after_copy: |
     cd "{{ _copier_conf.dst_path }}"
     Copy .env.example to .env, then set SECRET_KEY (and POSTGRES_PASSWORD for PostgreSQL).
 
-  Docker-only development (recommended):
+  Start Docker-only development:
     docker compose -f docker-compose.yml -f compose.dev.yml up --build
 
-  Production-like Docker run:
-    docker compose up --build
+  Create the first admin user (in another terminal):
+    docker compose -f docker-compose.yml -f compose.dev.yml exec web python backend/manage.py createsuperuser
+
+  Tests and lint:
+    docker compose -f docker-compose.yml -f compose.dev.yml run --rm web pytest
+    docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps --entrypoint ruff web check .
 
   {% if include_precommit %}
-  Optional local venv:
-    python -m venv .venv && source .venv/bin/activate
-    pip install -r requirements-dev.txt
-    pre-commit install
-  {% else %}
-  Optional local venv:
-    python -m venv .venv && source .venv/bin/activate
-    pip install -r requirements-dev.txt
+  Run pre-commit in Docker:
+    docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps --entrypoint pre-commit web run --all-files
+
+  The .githooks/pre-push hook is configured automatically when Git is initialized.
   {% endif %}
+  {% if include_precommit and not init_git %}
+  After running `git init`, enable the pre-push hook with:
+    git config core.hooksPath .githooks
+  {% endif %}
+
+  Read README.md for the full Docker-only workflow.
+  No local Python, virtualenv or Makefile is required for daily work.
 
   Happy hacking!

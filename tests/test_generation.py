@@ -31,7 +31,6 @@ COMMON_FILES = [
     "entrypoint.sh",
     "requirements.txt",
     "requirements-dev.txt",
-    "Makefile",
     "pyproject.toml",
     ".editorconfig",
     ".gitattributes",
@@ -68,6 +67,9 @@ def test_common_structure(copier_copy):
     # Empty helper directories exist.
     for directory in ("docs", "data", "static"):
         assert (dest / directory).is_dir(), f"missing {directory}/"
+
+    # The generated workflow uses Docker Compose directly, not make.
+    assert not (dest / "Makefile").exists()
 
 
 @requires_copier
@@ -179,6 +181,29 @@ def test_init_git_creates_main_branch(copier_copy, monkeypatch):
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "main"
 
+    hooks_path = subprocess.run(
+        ["git", "-C", str(dest), "config", "--get", "core.hooksPath"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert hooks_path.returncode == 0, hooks_path.stderr
+    assert hooks_path.stdout.strip() == ".githooks"
+
+    hook = dest / ".githooks/pre-push"
+    assert hook.is_file()
+    assert "docker compose" in hook.read_text()
+    assert "pre-commit" in hook.read_text()
+
+    # The hook must be executable after cloning on Linux/macOS.
+    mode = subprocess.run(
+        ["git", "-C", str(dest), "ls-files", "-s", ".githooks/pre-push"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert mode.stdout.startswith("100755 "), mode.stdout
+
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")
 @requires_copier
@@ -198,7 +223,7 @@ def test_gitattributes_keeps_lf_after_clone(copier_copy, tmp_path, monkeypatch):
         check=True,
     )
 
-    for name in ("entrypoint.sh", "Makefile"):
+    for name in ("entrypoint.sh", ".githooks/pre-push"):
         assert b"\r\n" not in (clone / name).read_bytes(), f"{name} uses CRLF"
 
 
@@ -224,6 +249,8 @@ def test_no_jinja_leftovers(copier_copy):
 def test_precommit_toggle(copier_copy):
     with_precommit = copier_copy({**BASE_DATA, "project_slug": "with-precommit"})
     assert (with_precommit / ".pre-commit-config.yaml").is_file()
+    assert (with_precommit / ".githooks/pre-push").is_file()
+    assert "pre-commit" in (with_precommit / "requirements-dev.txt").read_text()
 
     without = copier_copy(
         {
@@ -233,6 +260,20 @@ def test_precommit_toggle(copier_copy):
         }
     )
     assert not (without / ".pre-commit-config.yaml").exists()
+    assert not (without / ".githooks").exists()
+    assert "pre-commit" not in (without / "requirements-dev.txt").read_text()
+
+
+@requires_copier
+def test_precommit_hook_runs_in_docker(copier_copy):
+    dest = copier_copy(BASE_DATA)
+    hook = (dest / ".githooks/pre-push").read_text()
+
+    assert "docker compose" in hook
+    assert "--entrypoint pre-commit" in hook
+    assert "run --all-files" in hook
+    assert "git push --no-verify" in hook
+    assert "make" not in hook.lower()
 
 
 @requires_copier
@@ -293,6 +334,7 @@ def test_compose_is_valid_yaml(copier_copy, database):
     assert "web" in parsed["services"]
     assert ("db" in parsed["services"]) is (database == "postgresql")
     assert "web" in dev_parsed["services"]
+    assert "precommit_cache" in dev_parsed["volumes"]
 
 
 @pytest.mark.parametrize("database", ["postgresql", "sqlite"])
@@ -311,6 +353,8 @@ def test_docker_dev_workflow(copier_copy, database):
     assert "requirements-dev.txt" in dockerfile
     assert "runserver" in dockerfile
     assert "USER app" in dockerfile
+    assert "git" in dockerfile.split("apt-get install", 1)[1].split("&&", 1)[0]
+    assert "safe.directory /app" in dockerfile
 
     base = yaml.safe_load((dest / "docker-compose.yml").read_text())
     base_web = base["services"]["web"]
@@ -321,21 +365,21 @@ def test_docker_dev_workflow(copier_copy, database):
     dev_web = dev["services"]["web"]
     assert dev_web["build"]["dockerfile"] == "Dockerfile.dev"
     assert dev_web["environment"]["DEBUG"] == "True"
+    assert dev_web["environment"]["PRE_COMMIT_HOME"] == "/home/app/.cache/pre-commit"
     assert "runserver" in " ".join(dev_web["command"])
     assert dev_web["restart"] == "no"
-    assert "./pyproject.toml:/app/pyproject.toml:ro" in dev_web["volumes"]
+    assert ".:/app" in dev_web["volumes"]
+    assert "precommit_cache:/home/app/.cache/pre-commit" in dev_web["volumes"]
+    assert "precommit_cache" in dev["volumes"]
 
-    makefile = (dest / "Makefile").read_text()
-    assert "COMPOSE_DEV" in makefile
-    assert "dev:" in makefile
-    assert "dev-test:" in makefile
-    assert "dev-lint:" in makefile
-    assert "dev-fmt:" in makefile
-    assert "dev-manage:" in makefile
+    assert not (dest / "Makefile").exists()
 
     readme = (dest / "README.md").read_text()
     assert "compose.dev.yml" in readme
-    assert "make dev" in readme
+    assert "docker compose" in readme
+    assert "--entrypoint pre-commit" in readme
+    assert "make dev" not in readme
+    assert "Makefile" not in readme
 
 
 @requires_copier
@@ -364,10 +408,14 @@ def test_development_extras_and_ruff(copier_copy):
     assert "[tool.black]" not in pyproject
     assert "[tool.ruff.format]" in pyproject
 
-    makefile = (dest / "Makefile").read_text()
-    assert "ruff format --check ." in makefile
-    assert "ruff format ." in makefile
-    assert "black" not in makefile.lower()
+    dockerfile = (dest / "Dockerfile.dev").read_text()
+    assert "requirements-dev.txt" in dockerfile
+    assert "git" in dockerfile.split("apt-get install", 1)[1].split("&&", 1)[0]
+
+    readme = (dest / "README.md").read_text()
+    assert "pre-commit" in readme
+    assert "docker compose" in readme
+    assert "Makefile" not in readme
 
     precommit = (dest / ".pre-commit-config.yaml").read_text()
     assert "psf/black" not in precommit
@@ -393,9 +441,11 @@ def test_generated_project_is_ruff_clean(copier_copy):
 
 
 def test_tasks_run_only_on_copy(template_root):
-    """`copier update` must not re-run the git init/commit task."""
+    """`copier update` must not re-run the git init/commit/hook tasks."""
     copier_yml = (template_root / "copier.yml").read_text()
     assert "_copier_operation == 'copy'" in copier_yml
+    assert "core.hooksPath" in copier_yml
+    assert ".githooks/pre-push" in copier_yml
 
 
 def test_no_postgres_password_question(template_root):

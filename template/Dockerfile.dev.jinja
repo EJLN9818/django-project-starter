@@ -7,9 +7,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# System dependencies (libpq is only needed for PostgreSQL)
+# System dependencies. Git is required by pre-commit; libpq only for PostgreSQL.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    git \
 {%- if database == 'postgresql' %}
     libpq-dev \
 {%- endif %}
@@ -34,6 +35,10 @@ COPY --chown=app:app pyproject.toml /app/pyproject.toml
 RUN chmod +x /entrypoint.sh
 
 USER app
+
+# The repository is bind-mounted from the host. Allow Git to inspect it even
+# when Docker Desktop reports a different owner for the mounted files.
+RUN git config --global --add safe.directory /app
 
 EXPOSE {{ port }}
 

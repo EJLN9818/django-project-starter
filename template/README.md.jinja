@@ -1,231 +1,354 @@
 # {{ project_name }}
 
-A Django project generated with **django-project-starter**.
+Django {{ django_version }} project generated with **django-project-starter**.
 
-## Configuration
+Day-to-day work is Docker-only: no local Python, virtualenv or database server
+is required. Docker runs Django, the dependencies and the database.
 
-- **Project name:** {{ project_name }}
-- **Slug:** {{ project_slug }}
-- **Port:** {{ port }}
-- **Database:** {{ database }}
-- **Django:** {{ django_version }}
-- **Python:** {{ python_version }}
+- **URL:** <http://localhost:{{ port }}>
+- **Slug:** `{{ project_slug }}`
+- **Database:** `{{ database }}`
+- **Python:** `{{ python_version }}` (inside the container)
 
-## Getting started
+The only host requirements are Docker Desktop (or Docker Engine + Compose v2)
+and Git.
 
-Create your environment file first (the app reads secrets from it):
+## First start
+
+### 1. Create the environment file
 
 ```bash
 cp .env.example .env
-# Windows PowerShell: Copy-Item .env.example .env
 ```
 
-Then edit `.env`:
+Windows PowerShell:
 
-- Set `SECRET_KEY` to a random value of at least 50 characters. Generate one
-  with:
+```powershell
+Copy-Item .env.example .env
+```
 
-  ```bash
-  python -c "import secrets; print(secrets.token_urlsafe(50))"
-  ```
+### 2. Set the secrets
+
+Open `.env` and set a strong `SECRET_KEY` (at least 50 characters). You can
+generate one without installing Python on the host:
+
+```bash
+docker run --rm python:{{ python_version }}-slim python -c "import secrets; print(secrets.token_urlsafe(50))"
+```
 
 {%- if database == 'postgresql' %}
 
-- Set `POSTGRES_PASSWORD`. Do this **before** the first Docker start, because
-  PostgreSQL only applies it when the volume is initialized.
+Set `POSTGRES_PASSWORD` too. Do this **before the first start**: PostgreSQL only
+applies the password when it initializes its volume.
 {%- endif %}
 
-### Docker-only development (recommended)
-
-No local Python installation is required. The development image installs
-`requirements-dev.txt` (including `django-debug-toolbar` and `factory_boy`) and
-runs Django's autoreloading server:
+### 3. Start the development stack
 
 ```bash
 docker compose -f docker-compose.yml -f compose.dev.yml up --build
 ```
 
-The app is available at <http://localhost:{{ port }}>. The source tree is bind
-mounted, so changes reload automatically. The overlay forces `DEBUG=True`,
-connects to the Docker database when using PostgreSQL, and uses `runserver`.
+This uses `runserver`, enables `DEBUG=True`, mounts the repository and installs
+the development dependencies. The first build takes a few minutes.
 
-If you have GNU make installed, `make dev` is the same command.
-
-Run tests and linting inside the development container:
+Open <http://localhost:{{ port }}>. Press `Ctrl+C` to stop the foreground stack,
+or start it in the background with `-d`:
 
 ```bash
-docker compose -f docker-compose.yml -f compose.dev.yml run --rm web pytest
-docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff check .
-docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff format --check .
+docker compose -f docker-compose.yml -f compose.dev.yml up -d --build
 ```
 
-The equivalent make targets are `make dev-test`, `make dev-lint` and
-`make dev-fmt`.
+### 4. Create the admin user
 
-### Production-like Docker run
-
-```bash
-docker compose up --build
-```
-
-This runs Gunicorn with `DEBUG=False`. The app will be available at
-<http://localhost:{{ port }}>.
-
-Static files are collected during the image build. Rebuild the image after
-changing static files:
+In another terminal, while the stack is running:
 
 ```bash
-docker compose up --build
-```
-
-### Local development with venv (optional)
-
-You do not need a local Python environment when using the Docker-only workflow.
-If you prefer a local venv:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt
-{%- if include_precommit %}
-pre-commit install
-{%- endif %}
-
-python backend/manage.py migrate
-python backend/manage.py runserver
-```
-
-{%- if database == 'postgresql' %}
-
-`.env.example` uses `DEBUG=True` and `DB_HOST=localhost`, so PostgreSQL works
-with a local server. The production-like Compose stack overrides `DEBUG=False`
-and `DB_HOST=db`; the development overlay keeps `DB_HOST=db` but sets
-`DEBUG=True`.
-{%- else %}
-
-`.env.example` uses `DEBUG=True` for local development. The development overlay
-keeps it enabled; the production-like Compose stack sets `DEBUG=False`.
-{%- endif %}
-
-Create an admin user:
-
-```bash
-# Docker-only workflow (or: make dev-manage CMD=createsuperuser)
-docker compose -f docker-compose.yml -f compose.dev.yml run --rm web \
-  python backend/manage.py createsuperuser
-
-# Local venv
-python backend/manage.py createsuperuser
+docker compose -f docker-compose.yml -f compose.dev.yml exec web python backend/manage.py createsuperuser
 ```
 
 Then open <http://localhost:{{ port }}/admin/>.
 
-## Make targets
+## Daily commands
 
-If you have GNU make installed (Git Bash or WSL on Windows):
+The development overlay is always the same two files:
 
-```bash
-make help        # list all targets
-make dev         # Docker-only development stack (foreground)
-make dev-down    # stop the development stack
-make dev-test    # pytest inside the development container
-make dev-lint    # ruff check + format check inside the development container
-make dev-fmt     # auto-fix linting and formatting inside the container
-make dev-shell   # Django shell inside the development container
-make dev-manage  # Django command, e.g. make dev-manage CMD=createsuperuser
-make up          # production-like Docker stack in the background
-make down        # stop the production-like stack
-make migrate     # apply migrations with the local venv
-make superuser   # create an admin user with the local venv
-make test        # run pytest in the local venv
-make lint        # ruff check + format check in the local venv
-make fmt         # auto-fix with the local venv
+```text
+docker compose -f docker-compose.yml -f compose.dev.yml
 ```
 
-## Tests and linting
+The commands below use that prefix. Run them from the project root.
 
-With the Docker-only workflow:
+### Start, stop and inspect
 
 ```bash
+# Start in the foreground (logs visible, Ctrl+C stops it)
+docker compose -f docker-compose.yml -f compose.dev.yml up --build
+
+# Start in the background
+docker compose -f docker-compose.yml -f compose.dev.yml up -d --build
+
+# Stop the development stack
+docker compose -f docker-compose.yml -f compose.dev.yml down
+
+# Follow logs
+docker compose -f docker-compose.yml -f compose.dev.yml logs -f
+
+# Show running services
+docker compose -f docker-compose.yml -f compose.dev.yml ps
+```
+
+### Tests and quality
+
+```bash
+# Run the test suite
 docker compose -f docker-compose.yml -f compose.dev.yml run --rm web pytest
-docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff check .
-docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff format --check .
-```
 
-With a local venv:
+# Lint and formatting check (no changes)
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps --entrypoint ruff web check .
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps --entrypoint ruff web format --check .
 
-```bash
-pytest
-ruff check .
-ruff format --check .
+# Auto-fix linting and formatting
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps --entrypoint ruff web check --fix .
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps --entrypoint ruff web format .
 {%- if include_precommit %}
-pre-commit run --all-files
+
+# Run all pre-commit hooks inside the development image
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps --entrypoint pre-commit web run --all-files --show-diff-on-failure
 {%- endif %}
 ```
 
-Ruff handles both linting and formatting; Black is not used.
+Ruff handles linting and formatting. Black is not used.
 
-## Accessing from another machine
+### Django commands
+
+`run --rm` starts a one-off container. The explicit `--entrypoint python` skips
+the migration entrypoint, so the command you ask for is exactly what runs.
+
+```bash
+# Open the Django shell
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --entrypoint python web backend/manage.py shell
+
+# Any manage.py command
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --entrypoint python web backend/manage.py <command>
+
+# Create and apply migrations
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --entrypoint python web backend/manage.py makemigrations
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --entrypoint python web backend/manage.py migrate
+
+# Create a new app inside backend/
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --entrypoint python web backend/manage.py startapp myapp backend/myapp
+```
+
+When the stack is already running, `exec` is faster than a new one-off
+container:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml exec web python backend/manage.py createsuperuser
+```
+
+### Rebuild after dependency changes
+
+The development image installs `requirements-dev.txt` at build time. Rebuild
+when you edit requirements:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml up --build
+```
+
+### Production-like run
+
+The base Compose file runs Gunicorn with `DEBUG=False`:
+
+```bash
+docker compose up --build
+```
+
+Static files are collected during the image build, so rebuild after changing
+them. The Django Debug Toolbar is not installed in this image.
+
+## Pre-commit in Docker
+
+`pre-commit` and Git run inside the development container. Nothing needs to be
+installed on the host.
+
+Run it manually with the command from the previous section:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps --entrypoint pre-commit web run --all-files --show-diff-on-failure
+```
+
+### Automatic pre-push hook
+
+{% if include_precommit %}
+New projects with a Git repository get a `.githooks/pre-push` hook configured
+automatically. It runs the same pre-commit command in Docker before every
+`git push`.
+
+- The first run downloads the hook environments into the `precommit_cache`
+  Docker volume; later runs are much faster.
+- If a hook modifies a file, the push is blocked. Review the change, commit it,
+  and push again.
+- If Docker is not running, the push is blocked. Start Docker and retry.
+- Emergency bypass: `git push --no-verify` (use it only when you understand the
+  risk).
+
+If you generated this project before the hook existed, or you initialized Git
+later, enable it once:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+To disable it:
+
+```bash
+git config --unset core.hooksPath
+```
+
+The hook is intentionally only in the development image. The production image
+does not contain pre-commit, Ruff or pytest.
+{%- else %}
+This project was generated without pre-commit. The development image still has
+Ruff and pytest, but there is no `.pre-commit-config.yaml` or Git hook.
+{%- endif %}
+
+## Project layout and where to change things
+
+```text
+{{ project_slug }}/
+|-- backend/
+|   |-- manage.py
+|   `-- {{ package_name }}/
+|       |-- settings.py       # environment, apps, middleware, database
+|       |-- urls.py           # routes
+|       |-- wsgi.py
+|       `-- asgi.py
+|-- data/                     # SQLite files (empty when using PostgreSQL)
+|-- docs/
+|-- static/                   # collected static output (served by WhiteNoise)
+|-- Dockerfile                # production-like Gunicorn image
+|-- Dockerfile.dev            # development image (runserver + dev tools)
+|-- docker-compose.yml        # base stack
+|-- compose.dev.yml           # development overlay
+|-- entrypoint.sh             # migrations, then the requested command
+|-- requirements.txt          # production dependencies
+|-- requirements-dev.txt      # test/lint/pre-commit dependencies
+|-- pyproject.toml            # Ruff and pytest configuration
+|-- .env.example              # committed placeholders
+|-- .gitattributes
+|-- .gitignore
+|-- .dockerignore
+|-- .copier-answers.yml       # do not delete; needed by `copier update`
+{%- if include_precommit %}
+|-- .pre-commit-config.yaml
+|-- .githooks/
+|   `-- pre-push
+{%- endif %}
+`-- README.md
+```
+
+- **Settings:** `backend/{{ package_name }}/settings.py` reads secrets from
+  `.env` through `django-environ`.
+- **Routes:** `backend/{{ package_name }}/urls.py`.
+- **New apps:** create them under `backend/`; add the app config to
+  `INSTALLED_APPS`.
+- **Dependencies:** runtime packages go in `requirements.txt`; test and quality
+  tools go in `requirements-dev.txt`. Rebuild after either change.
+- **Environment:** copy `.env.example` to `.env`; never commit `.env`.
+- **Docker:** `docker-compose.yml` is the base stack; `compose.dev.yml` only
+  changes development behavior and mounts the repository.
+
+## Database
+
+{%- if database == 'postgresql' %}
+
+The PostgreSQL service is `db`. Open a `psql` shell with:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml exec db psql -U {{ postgres_user }} -d {{ postgres_db }}
+```
+
+To reset the database, stop the stack and delete its volume:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml down -v
+```
+
+This deletes all data. It is also required if you change `POSTGRES_PASSWORD`
+after the first start, because PostgreSQL keeps the password from the initial
+volume.
+{%- else %}
+
+The SQLite database lives in `data/db.sqlite3`. Back it up before deleting it.
+Stop the stack before moving or deleting the file:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml down
+```
+
+Then remove `data/db.sqlite3` and run the migrations again.
+{%- endif %}
+
+## Updating this project from the template
+
+The `.copier-answers.yml` file records the template path and the version used.
+Do not delete it. From the generated project:
+
+```bash
+copier update
+```
+
+This is the only normal task that needs Python and Copier on the host. Review
+the diff before committing. After an update, rebuild the development image:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml up --build
+```
+
+{% if include_precommit %}
+If the update adds `.githooks/pre-push` but does not enable it, run
+`git config core.hooksPath .githooks` once.
+{% endif %}
+
+## Troubleshooting
+
+- **`Set a strong SECRET_KEY`** - edit `.env` and set a random value of at least
+  50 characters.
+- **Missing `.env`** - copy `.env.example` to `.env`.
+- **Port already in use** - stop the process using it, or change the published
+  port and the `runserver` port in the Compose files.
+{%- if database == 'postgresql' %}
+- **`could not translate host name "db"`** - you are running Django outside
+  Docker. Inside the stack the host is `db`; the development overlay sets it
+  automatically.
+- **Changed `POSTGRES_PASSWORD` after the first start** - the old password is
+  stored in the volume. Use `down -v` (deletes data) or change the password
+  inside PostgreSQL.
+{%- endif %}
+- **Changes do not reload** - ensure you started with `compose.dev.yml`.
+  Plain `docker compose up` runs the production-like image without autoreload.
+- **Debug Toolbar does not appear** - it only runs with `DEBUG=True` and on HTML
+  responses. Use the development overlay.
+- **`Permission denied` on Linux** - the images use UID/GID 1000. If your host
+  user has another ID, adjust the `app` user in the Dockerfile or align the
+  mounted files' ownership.
+- **A new dependency is missing** - rebuild the development image with
+  `docker compose -f docker-compose.yml -f compose.dev.yml up --build`.
+- **Pre-commit cannot connect to Docker** - start Docker Desktop and retry the
+  push. You can also run the manual pre-commit command above.
+{% if include_precommit %}
+- **Pre-commit keeps reinstalling hooks** - the cache volume was removed with
+  `docker compose ... down -v`; the next run will download the hooks again.
+{% endif %}
+
+## Accessing the app from another machine
 
 Django only accepts hosts listed in `ALLOWED_HOSTS`. To reach the app from
 another device on your network, add your LAN IP or hostname to the
 `ALLOWED_HOSTS` line in `.env`, for example:
 
-```
+```text
 ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.50
 ```
 
-## Troubleshooting
-
-- **`ImproperlyConfigured: Set a strong SECRET_KEY`** — edit `.env` and set a
-  random `SECRET_KEY`.
-{%- if database == 'postgresql' %}
-- **`could not translate host name "db"`** — you are running outside Docker.
-  Set `DB_HOST=localhost` in `.env` (the default in `.env.example`).
-- **Changed `POSTGRES_PASSWORD` after the first start** — PostgreSQL keeps the
-  password from the initial volume. Either run `docker compose down -v` (this
-  deletes the database) or change the password inside PostgreSQL with
-  `ALTER USER`.
-{%- endif %}
-- **Changes are not reloading in development** — make sure you started the
-  development overlay with `compose.dev.yml`; `docker compose up` alone runs
-  the production-like image without autoreload.
-- **Django Debug Toolbar does not appear** — it only runs with `DEBUG=True`
-  and on HTML responses. Use the development overlay, and do not expose the
-  development port to untrusted networks.
-- **`Permission denied` when writing files on Linux** — the development and
-  production images use UID/GID 1000. If your host user has another ID, adjust
-  the `app` user in the Dockerfile or align ownership of the mounted files.
-- **Static files look stale in the production-like image** — they are collected
-  at image build time; rebuild with `docker compose up --build`. Development
-  uses `runserver` and does not require a rebuild for normal code changes.
-- **Missing `.env`** — copy `.env.example` to `.env`.
-
-## Layout
-
-```
-{{ project_slug }}/
-├── backend/          # Django project code
-├── data/             # SQLite database files
-├── docs/             # Documentation
-├── static/           # Collectstatic output (served by WhiteNoise)
-├── Dockerfile        # Production-like image (Gunicorn)
-├── Dockerfile.dev    # Docker-only development image (runserver + dev tools)
-├── docker-compose.yml
-├── compose.dev.yml   # Development overlay
-├── entrypoint.sh
-├── requirements.txt
-├── requirements-dev.txt
-├── Makefile
-├── .env.example
-├── .editorconfig
-├── .gitattributes
-├── .gitignore
-├── .dockerignore
-├── .copier-answers.yml
-├── pyproject.toml    # ruff / pytest config
-{%- if include_precommit %}
-├── .pre-commit-config.yaml
-{%- endif %}
-└── README.md
-```
+Then restart the development stack.

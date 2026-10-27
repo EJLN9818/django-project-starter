@@ -1,4 +1,4 @@
-# Keep shell scripts and Makefiles LF on every platform.
+# Keep shell scripts and Git hooks LF on every platform.
 * text=auto eol=lf
 
 *.bat text eol=crlf

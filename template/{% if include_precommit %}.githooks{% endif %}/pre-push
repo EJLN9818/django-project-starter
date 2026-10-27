@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+# Run the same checks as the Docker pre-commit command before pushing.
+# Nothing needs to be installed on the host except Docker and Git.
+#
+# Emergency bypass (not recommended): git push --no-verify
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps \
+  --entrypoint pre-commit web run --all-files --show-diff-on-failure
