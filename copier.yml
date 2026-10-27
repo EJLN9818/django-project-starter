@@ -103,15 +103,20 @@ _message_after_copy: |
   Next steps:
     cd "{{ _copier_conf.dst_path }}"
     Copy .env.example to .env, then set SECRET_KEY (and POSTGRES_PASSWORD for PostgreSQL).
+
+  Docker-only development (recommended):
+    docker compose -f docker-compose.yml -f compose.dev.yml up --build
+
+  Production-like Docker run:
     docker compose up --build
 
   {% if include_precommit %}
-  For local development:
+  Optional local venv:
     python -m venv .venv && source .venv/bin/activate
     pip install -r requirements-dev.txt
     pre-commit install
   {% else %}
-  For local development:
+  Optional local venv:
     python -m venv .venv && source .venv/bin/activate
     pip install -r requirements-dev.txt
   {% endif %}

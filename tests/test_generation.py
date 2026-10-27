@@ -24,7 +24,9 @@ BASE_DATA = {
 
 COMMON_FILES = [
     "Dockerfile",
+    "Dockerfile.dev",
     "docker-compose.yml",
+    "compose.dev.yml",
     "entrypoint.sh",
     "requirements.txt",
     "requirements-dev.txt",
@@ -284,10 +286,53 @@ def test_compose_is_valid_yaml(copier_copy, database):
 
     dest = copier_copy(data)
     parsed = yaml.safe_load((dest / "docker-compose.yml").read_text())
+    dev_parsed = yaml.safe_load((dest / "compose.dev.yml").read_text())
 
     assert "services" in parsed
     assert "web" in parsed["services"]
     assert ("db" in parsed["services"]) is (database == "postgresql")
+    assert "web" in dev_parsed["services"]
+
+
+@pytest.mark.parametrize("database", ["postgresql", "sqlite"])
+@requires_copier
+def test_docker_dev_workflow(copier_copy, database):
+    """The dev overlay must run runserver with dev dependencies and DEBUG."""
+    yaml = pytest.importorskip("yaml")
+
+    if database == "sqlite":
+        data = _sqlite_data(project_slug="dev-sqlite")
+    else:
+        data = {**BASE_DATA, "project_slug": "dev-postgres"}
+    dest = copier_copy(data)
+
+    dockerfile = (dest / "Dockerfile.dev").read_text()
+    assert "requirements-dev.txt" in dockerfile
+    assert "runserver" in dockerfile
+    assert "USER app" in dockerfile
+
+    base = yaml.safe_load((dest / "docker-compose.yml").read_text())
+    base_web = base["services"]["web"]
+    assert "gunicorn" in " ".join(base_web["command"])
+    assert base_web["environment"]["DEBUG"] == "False"
+
+    dev = yaml.safe_load((dest / "compose.dev.yml").read_text())
+    dev_web = dev["services"]["web"]
+    assert dev_web["build"]["dockerfile"] == "Dockerfile.dev"
+    assert dev_web["environment"]["DEBUG"] == "True"
+    assert "runserver" in " ".join(dev_web["command"])
+    assert dev_web["restart"] == "no"
+    assert "./pyproject.toml:/app/pyproject.toml:ro" in dev_web["volumes"]
+
+    makefile = (dest / "Makefile").read_text()
+    assert "COMPOSE_DEV" in makefile
+    assert "dev:" in makefile
+    assert "dev-test:" in makefile
+    assert "dev-lint:" in makefile
+
+    readme = (dest / "README.md").read_text()
+    assert "compose.dev.yml" in readme
+    assert "make dev" in readme
 
 
 def test_tasks_run_only_on_copy(template_root):

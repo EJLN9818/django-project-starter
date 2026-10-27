@@ -31,17 +31,42 @@ Then edit `.env`:
 
 {%- if database == 'postgresql' %}
 
-- Set `POSTGRES_PASSWORD`. Do this **before** the first `docker compose up`,
-  because PostgreSQL only applies it when the volume is initialized.
+- Set `POSTGRES_PASSWORD`. Do this **before** the first Docker start, because
+  PostgreSQL only applies it when the volume is initialized.
 {%- endif %}
 
-### With Docker (recommended)
+### Docker-only development (recommended)
+
+No local Python installation is required. The development image installs
+`requirements-dev.txt` and runs Django's autoreloading server:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml up --build
+```
+
+The app is available at <http://localhost:{{ port }}>. The source tree is bind
+mounted, so changes reload automatically. The overlay forces `DEBUG=True`,
+connects to the Docker database when using PostgreSQL, and uses `runserver`.
+
+If you have GNU make installed, `make dev` is the same command.
+
+Run tests and linting inside the development container:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm web pytest
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff check .
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm web black --check .
+```
+
+The equivalent make targets are `make dev-test` and `make dev-lint`.
+
+### Production-like Docker run
 
 ```bash
 docker compose up --build
 ```
 
-Docker Compose runs with `DEBUG=False`. The app will be available at
+This runs Gunicorn with `DEBUG=False`. The app will be available at
 <http://localhost:{{ port }}>.
 
 Static files are collected during the image build. Rebuild the image after
@@ -51,7 +76,10 @@ changing static files:
 docker compose up --build
 ```
 
-### Local development
+### Local development with venv (optional)
+
+You do not need a local Python environment when using the Docker-only workflow.
+If you prefer a local venv:
 
 ```bash
 python -m venv .venv
@@ -78,6 +106,11 @@ overrides it to `DEBUG=False`.
 Create an admin user:
 
 ```bash
+# Docker-only workflow
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm web \
+  python backend/manage.py createsuperuser
+
+# Local venv
 python backend/manage.py createsuperuser
 ```
 
@@ -89,15 +122,31 @@ If you have GNU make installed (Git Bash or WSL on Windows):
 
 ```bash
 make help        # list all targets
-make up          # docker compose up -d --build
-make migrate     # apply migrations
-make superuser   # create an admin user
-make test        # run pytest
-make lint        # ruff + black check
-make fmt         # auto-fix
+make dev         # Docker-only development stack (foreground)
+make dev-down    # stop the development stack
+make dev-test    # pytest inside the development container
+make dev-lint    # ruff + black inside the development container
+make dev-shell   # Django shell inside the development container
+make up          # production-like Docker stack in the background
+make down        # stop the production-like stack
+make migrate     # apply migrations with the local venv
+make superuser   # create an admin user with the local venv
+make test        # run pytest in the local venv
+make lint        # ruff + black check in the local venv
+make fmt         # auto-fix with the local venv
 ```
 
 ## Tests and linting
+
+With the Docker-only workflow:
+
+```bash
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm web pytest
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff check .
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm web black --check .
+```
+
+With a local venv:
 
 ```bash
 pytest
@@ -130,8 +179,15 @@ ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.50
   deletes the database) or change the password inside PostgreSQL with
   `ALTER USER`.
 {%- endif %}
-- **Static files look stale in Docker** — they are collected at image build
-  time; rebuild with `docker compose up --build`.
+- **Changes are not reloading in development** — make sure you started the
+  development overlay with `compose.dev.yml`; `docker compose up` alone runs
+  the production-like image without autoreload.
+- **`Permission denied` when writing files on Linux** — the development and
+  production images use UID/GID 1000. If your host user has another ID, adjust
+  the `app` user in the Dockerfile or align ownership of the mounted files.
+- **Static files look stale in the production-like image** — they are collected
+  at image build time; rebuild with `docker compose up --build`. Development
+  uses `runserver` and does not require a rebuild for normal code changes.
 - **Missing `.env`** — copy `.env.example` to `.env`.
 
 ## Layout
@@ -142,8 +198,10 @@ ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.50
 ├── data/             # SQLite database files
 ├── docs/             # Documentation
 ├── static/           # Collectstatic output (served by WhiteNoise)
-├── Dockerfile
+├── Dockerfile        # Production-like image (Gunicorn)
+├── Dockerfile.dev    # Docker-only development image (runserver + dev tools)
 ├── docker-compose.yml
+├── compose.dev.yml   # Development overlay
 ├── entrypoint.sh
 ├── requirements.txt
 ├── requirements-dev.txt

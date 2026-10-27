@@ -1,0 +1,18 @@
+# Docker-only development overlay. Use it together with docker-compose.yml:
+#   docker compose -f docker-compose.yml -f compose.dev.yml up --build
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command:
+      ["python", "backend/manage.py", "runserver", "0.0.0.0:{{ port }}"]
+    environment:
+      DEBUG: "True"
+    volumes:
+      - ./backend:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml:ro
+{%- if database == 'sqlite' %}
+      - ./data:/app/data
+{%- endif %}
+    restart: "no"

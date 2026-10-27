@@ -3,12 +3,13 @@
 PYTHON ?= python
 MANAGE = $(PYTHON) backend/manage.py
 COMPOSE ?= docker compose
+COMPOSE_DEV = $(COMPOSE) -f docker-compose.yml -f compose.dev.yml
 
 .DEFAULT_GOAL := help
 .RECIPEPREFIX = >
 
-.PHONY: help up down build logs ps migrate makemigrations shell dbshell \
-        superuser test lint fmt collectstatic
+.PHONY: help up down build logs ps dev dev-down dev-test dev-lint dev-shell \
+        migrate makemigrations shell dbshell superuser test lint fmt collectstatic
 
 help: ## Show this help
 > @grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -27,6 +28,22 @@ logs: ## Follow container logs
 
 ps: ## Show running services
 > $(COMPOSE) ps
+
+dev: ## Build and start the Docker-only development stack (foreground)
+> $(COMPOSE_DEV) up --build
+
+dev-down: ## Stop the development stack
+> $(COMPOSE_DEV) down
+
+dev-test: ## Run pytest in the development container
+> $(COMPOSE_DEV) run --rm web pytest
+
+dev-lint: ## Check linting and formatting in the development container
+> $(COMPOSE_DEV) run --rm web ruff check .
+> $(COMPOSE_DEV) run --rm web black --check .
+
+dev-shell: ## Open the Django shell in the development container
+> $(COMPOSE_DEV) run --rm web python backend/manage.py shell
 
 migrate: ## Apply database migrations
 > $(MANAGE) migrate

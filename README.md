@@ -14,6 +14,9 @@ GitHub.
 - **PostgreSQL or SQLite**, selected interactively.
 - **Docker ready**: `Dockerfile`, `docker-compose.yml` with a PostgreSQL
   healthcheck, `entrypoint.sh` and `.dockerignore`.
+- **Docker-only development**: `Dockerfile.dev` + `compose.dev.yml` with
+  `runserver`, dev dependencies and bind-mounted source. No local Python
+  installation is required.
 - **Non-root container** with a fixed UID/GID.
 - **Static files served by WhiteNoise** (no extra nginx needed).
 - **Strong `SECRET_KEY` guard** when `DEBUG=False`.
@@ -76,8 +79,10 @@ my-project/
 ├── data/                       # SQLite database files
 ├── docs/
 ├── static/                     # Collected static files
-├── Dockerfile
+├── Dockerfile                  # Production-like image (Gunicorn)
+├── Dockerfile.dev              # Docker-only development image (runserver)
 ├── docker-compose.yml
+├── compose.dev.yml             # Development overlay
 ├── entrypoint.sh
 ├── requirements.txt
 ├── requirements-dev.txt
@@ -164,5 +169,5 @@ black .
 
 The test suite renders the template into a temporary directory and asserts on
 the resulting files for both database backends. It also verifies that every
-rendered Python file compiles and that both `docker-compose.yml` variants are
-valid YAML.
+rendered Python file compiles and that `docker-compose.yml` and
+`compose.dev.yml` are valid YAML for both database backends.
