@@ -24,8 +24,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Non-root user with a fixed UID/GID so bind mounts stay writable on Linux.
 RUN groupadd --gid 1000 app \
     && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash app \
-    && mkdir -p /app/static /app/data \
-    && chown -R app:app /app
+    && mkdir -p /app/static /app/data /home/app/.cache/pre-commit \
+    && chown -R app:app /app /home/app/.cache
 
 # The source is bind-mounted by compose.dev.yml, but copying it keeps the image
 # usable on its own (for example with `docker run`).

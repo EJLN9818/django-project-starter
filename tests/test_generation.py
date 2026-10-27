@@ -355,6 +355,8 @@ def test_docker_dev_workflow(copier_copy, database):
     assert "USER app" in dockerfile
     assert "git" in dockerfile.split("apt-get install", 1)[1].split("&&", 1)[0]
     assert "safe.directory /app" in dockerfile
+    assert "/home/app/.cache/pre-commit" in dockerfile
+    assert "chown -R app:app /app /home/app/.cache" in dockerfile
 
     base = yaml.safe_load((dest / "docker-compose.yml").read_text())
     base_web = base["services"]["web"]
