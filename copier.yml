@@ -94,8 +94,14 @@ init_git:
 # so updating never creates a second initial commit.
 _tasks:
   - command: >-
-      "{{ _copier_python }}" -c "import os, stat; p = '.githooks/pre-push'; os.chmod(p, os.stat(p).st_mode | stat.S_IXUSR)"
+      "{{ _copier_python }}" -c "import os, stat; p = '.githooks/pre-push'; os.chmod(p, os.stat(p).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)"
     when: "{{ _copier_operation == 'copy' and include_precommit }}"
+
+  # `copier update` does not initialize Git again, but the new hook still needs
+  # the executable bit when the project is used on Linux/macOS.
+  - command: >-
+      "{{ _copier_python }}" -c "import os, stat; p = '.githooks/pre-push'; os.chmod(p, os.stat(p).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)"
+    when: "{{ _copier_operation == 'update' and include_precommit }}"
 
   - command: >-
       "{{ _copier_python }}" -c "import subprocess as s; s.run(['git', 'init', '-q', '-b', 'main']); s.run(['git', 'add', '-A'])"
