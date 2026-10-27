@@ -166,6 +166,7 @@ docker compose up --build
 Static files are collected during the image build, so rebuild after changing
 them. The Django Debug Toolbar is not installed in this image.
 
+{% if include_precommit %}
 ## Pre-commit in Docker
 
 `pre-commit` and Git run inside the development container. Nothing needs to be
@@ -179,7 +180,6 @@ docker compose -f docker-compose.yml -f compose.dev.yml run --rm --no-deps --ent
 
 ### Automatic pre-push hook
 
-{% if include_precommit %}
 New projects with a Git repository get a `.githooks/pre-push` hook configured
 automatically. It runs the same pre-commit command in Docker before every
 `git push`.
