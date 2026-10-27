@@ -38,7 +38,8 @@ Then edit `.env`:
 ### Docker-only development (recommended)
 
 No local Python installation is required. The development image installs
-`requirements-dev.txt` and runs Django's autoreloading server:
+`requirements-dev.txt` (including `django-debug-toolbar` and `factory_boy`) and
+runs Django's autoreloading server:
 
 ```bash
 docker compose -f docker-compose.yml -f compose.dev.yml up --build
@@ -55,10 +56,11 @@ Run tests and linting inside the development container:
 ```bash
 docker compose -f docker-compose.yml -f compose.dev.yml run --rm web pytest
 docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff check .
-docker compose -f docker-compose.yml -f compose.dev.yml run --rm web black --check .
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff format --check .
 ```
 
-The equivalent make targets are `make dev-test` and `make dev-lint`.
+The equivalent make targets are `make dev-test`, `make dev-lint` and
+`make dev-fmt`.
 
 ### Production-like Docker run
 
@@ -127,7 +129,8 @@ make help        # list all targets
 make dev         # Docker-only development stack (foreground)
 make dev-down    # stop the development stack
 make dev-test    # pytest inside the development container
-make dev-lint    # ruff + black inside the development container
+make dev-lint    # ruff check + format check inside the development container
+make dev-fmt     # auto-fix linting and formatting inside the container
 make dev-shell   # Django shell inside the development container
 make dev-manage  # Django command, e.g. make dev-manage CMD=createsuperuser
 make up          # production-like Docker stack in the background
@@ -135,7 +138,7 @@ make down        # stop the production-like stack
 make migrate     # apply migrations with the local venv
 make superuser   # create an admin user with the local venv
 make test        # run pytest in the local venv
-make lint        # ruff + black check in the local venv
+make lint        # ruff check + format check in the local venv
 make fmt         # auto-fix with the local venv
 ```
 
@@ -146,7 +149,7 @@ With the Docker-only workflow:
 ```bash
 docker compose -f docker-compose.yml -f compose.dev.yml run --rm web pytest
 docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff check .
-docker compose -f docker-compose.yml -f compose.dev.yml run --rm web black --check .
+docker compose -f docker-compose.yml -f compose.dev.yml run --rm web ruff format --check .
 ```
 
 With a local venv:
@@ -154,11 +157,13 @@ With a local venv:
 ```bash
 pytest
 ruff check .
-black --check .
+ruff format --check .
 {%- if include_precommit %}
 pre-commit run --all-files
 {%- endif %}
 ```
+
+Ruff handles both linting and formatting; Black is not used.
 
 ## Accessing from another machine
 
@@ -185,6 +190,9 @@ ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.50
 - **Changes are not reloading in development** — make sure you started the
   development overlay with `compose.dev.yml`; `docker compose up` alone runs
   the production-like image without autoreload.
+- **Django Debug Toolbar does not appear** — it only runs with `DEBUG=True`
+  and on HTML responses. Use the development overlay, and do not expose the
+  development port to untrusted networks.
 - **`Permission denied` when writing files on Linux** — the development and
   production images use UID/GID 1000. If your host user has another ID, adjust
   the `app` user in the Dockerfile or align ownership of the mounted files.
@@ -215,7 +223,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.50
 ├── .gitignore
 ├── .dockerignore
 ├── .copier-answers.yml
-├── pyproject.toml    # ruff / black / pytest config
+├── pyproject.toml    # ruff / pytest config
 {%- if include_precommit %}
 ├── .pre-commit-config.yaml
 {%- endif %}

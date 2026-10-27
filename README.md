@@ -23,8 +23,11 @@ GitHub.
 - **Line endings normalized** with `.gitattributes` (safe on Windows clones).
 - **Environment management**: `.env.example` + `.gitignore` (kept in sync via
   `copier update`). Secrets are never written to committed files.
-- **Code quality**: `ruff`, `black`, `pre-commit` and `.editorconfig`.
+- **Code quality**: `ruff` for linting and formatting, `pre-commit` and
+  `.editorconfig`.
 - **Tests**: `pytest` wiring in `pyproject.toml`.
+- **Development extras**: `django-debug-toolbar` and `factory_boy`, installed
+  only in development.
 - **Git initialization** with an initial commit.
 
 ## Requirements
@@ -87,7 +90,7 @@ my-project/
 ├── requirements.txt
 ├── requirements-dev.txt
 ├── Makefile
-├── pyproject.toml              # ruff / black / pytest config
+├── pyproject.toml              # ruff / pytest config
 ├── .pre-commit-config.yaml     # optional (include_precommit)
 ├── .editorconfig
 ├── .gitattributes
@@ -125,7 +128,7 @@ use a git URL as the template source.
 ### Releases
 
 Tag stable versions of the template (for example
-`git tag v1.1.0 && git push --tags`) so `copier update` uses a deterministic
+`git tag v1.2.0 && git push --tags`) so `copier update` uses a deterministic
 version instead of the current `HEAD`.
 
 ### Secrets
@@ -154,7 +157,7 @@ Common tasks (GNU make; on Windows use Git Bash or WSL):
 
 ```bash
 make test        # run the template test suite
-make lint        # ruff + black check
+make lint        # ruff check + format check
 make fmt         # auto-fix
 make generate DEST=../my-project   # generate a project (absolute path internally)
 ```
@@ -164,7 +167,7 @@ Without make:
 ```bash
 pytest
 ruff check --fix .
-black .
+ruff format .
 ```
 
 The test suite renders the template into a temporary directory and asserts on

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -329,11 +330,66 @@ def test_docker_dev_workflow(copier_copy, database):
     assert "dev:" in makefile
     assert "dev-test:" in makefile
     assert "dev-lint:" in makefile
+    assert "dev-fmt:" in makefile
     assert "dev-manage:" in makefile
 
     readme = (dest / "README.md").read_text()
     assert "compose.dev.yml" in readme
     assert "make dev" in readme
+
+
+@requires_copier
+def test_development_extras_and_ruff(copier_copy):
+    """Dev tools must stay out of production and Black must not be duplicated."""
+    dest = copier_copy(BASE_DATA)
+
+    runtime_requirements = (dest / "requirements.txt").read_text().lower()
+    assert "django-debug-toolbar" not in runtime_requirements
+    assert "factory-boy" not in runtime_requirements
+
+    dev_requirements = (dest / "requirements-dev.txt").read_text().lower()
+    assert "django-debug-toolbar==8.0.0" in dev_requirements
+    assert "factory-boy==3.3.3" in dev_requirements
+    assert "black" not in dev_requirements
+
+    settings = (dest / "backend/demo_project/settings.py").read_text()
+    assert 'INSTALLED_APPS.append("debug_toolbar")' in settings
+    assert 'MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")' in settings
+    assert "INTERNAL_IPS" in settings
+
+    urls = (dest / "backend/demo_project/urls.py").read_text()
+    assert 'path("__debug__/", include("debug_toolbar.urls"))' in urls
+
+    pyproject = (dest / "pyproject.toml").read_text()
+    assert "[tool.black]" not in pyproject
+    assert "[tool.ruff.format]" in pyproject
+
+    makefile = (dest / "Makefile").read_text()
+    assert "ruff format --check ." in makefile
+    assert "ruff format ." in makefile
+    assert "black" not in makefile.lower()
+
+    precommit = (dest / ".pre-commit-config.yaml").read_text()
+    assert "psf/black" not in precommit
+    assert "ruff-check" in precommit
+    assert "ruff-format" in precommit
+    assert "rev: v0.17.3" in precommit
+    assert "rev: v6.0.0" in precommit
+
+
+@requires_copier
+def test_generated_project_is_ruff_clean(copier_copy):
+    """The rendered project must pass the same Ruff checks used in Docker."""
+    dest = copier_copy(BASE_DATA)
+
+    for args in (["check", "."], ["format", "--check", "."]):
+        result = subprocess.run(
+            [sys.executable, "-m", "ruff", *args],
+            cwd=dest,
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_tasks_run_only_on_copy(template_root):

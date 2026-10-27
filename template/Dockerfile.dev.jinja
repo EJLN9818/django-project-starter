@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 {%- endif %}
     && rm -rf /var/lib/apt/lists/*
 
-# Development dependencies include pytest, ruff, black and the runtime stack.
+# Development dependencies include pytest, Ruff, factory_boy and the runtime stack.
 COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements-dev.txt

@@ -16,7 +16,5 @@ select = ["E", "F", "I", "B", "UP", "DJ"]
 [tool.ruff.lint.isort]
 known-first-party = ["backend"]
 
-[tool.black]
-line-length = 88
-target-version = ["py{{ python_version | replace('.', '') }}"]
-extend-exclude = "migrations/"
+[tool.ruff.format]
+quote-style = "double"

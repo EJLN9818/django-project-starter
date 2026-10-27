@@ -67,6 +67,23 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+if DEBUG:
+    # The toolbar is installed only in development. It must never be enabled
+    # in production because it exposes queries and request data.
+    import socket
+
+    INSTALLED_APPS.append("debug_toolbar")
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+    INTERNAL_IPS = ["127.0.0.1", "::1"]
+    try:
+        _, _, addresses = socket.gethostbyname_ex(socket.gethostname())
+    except OSError:
+        addresses = []
+    # In Docker, requests arrive through the bridge gateway (for example
+    # 172.18.0.1), not from 127.0.0.1. Add the gateway for each local address.
+    INTERNAL_IPS.extend(f"{address.rsplit('.', 1)[0]}.1" for address in addresses)
+
 ROOT_URLCONF = "backend.{{ package_name }}.urls"
 
 TEMPLATES = [
@@ -116,8 +133,7 @@ DATABASES = {
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": (
-            "django.contrib.auth.password_validation."
-            "UserAttributeSimilarityValidator"
+            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
         )
     },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},

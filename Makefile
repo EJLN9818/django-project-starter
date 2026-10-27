@@ -18,11 +18,11 @@ test: ## Run the template test suite
 
 lint: ## Check linting and formatting
 > ruff check .
-> black --check .
+> ruff format --check .
 
 fmt: ## Auto-fix linting and formatting
 > ruff check --fix .
-> black .
+> ruff format .
 
 generate: ## Generate a project: make generate DEST=../my-project
 > copier copy "$(CURDIR)" "$(DEST)"

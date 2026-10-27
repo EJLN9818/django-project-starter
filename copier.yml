@@ -82,7 +82,7 @@ python_version:
 
 include_precommit:
   type: bool
-  help: Include pre-commit, ruff and black configuration?
+  help: Include pre-commit and Ruff configuration?
   default: true
 
 init_git:

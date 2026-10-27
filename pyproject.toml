@@ -13,6 +13,5 @@ extend-exclude = ["template"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
-[tool.black]
-line-length = 100
-extend-exclude = "template/"
+[tool.ruff.format]
+quote-style = "double"

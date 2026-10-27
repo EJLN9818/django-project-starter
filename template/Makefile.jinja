@@ -8,8 +8,9 @@ COMPOSE_DEV = $(COMPOSE) -f docker-compose.yml -f compose.dev.yml
 .DEFAULT_GOAL := help
 .RECIPEPREFIX = >
 
-.PHONY: help up down build logs ps dev dev-down dev-test dev-lint dev-shell \
-        dev-manage migrate makemigrations shell dbshell superuser test lint fmt collectstatic
+.PHONY: help up down build logs ps dev dev-down dev-test dev-lint dev-fmt \
+        dev-shell dev-manage migrate makemigrations shell dbshell superuser test \
+        lint fmt collectstatic
 
 help: ## Show this help
 > @grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -40,7 +41,11 @@ dev-test: ## Run pytest in the development container
 
 dev-lint: ## Check linting and formatting in the development container
 > $(COMPOSE_DEV) run --rm web ruff check .
-> $(COMPOSE_DEV) run --rm web black --check .
+> $(COMPOSE_DEV) run --rm web ruff format --check .
+
+dev-fmt: ## Auto-fix linting and formatting in the development container
+> $(COMPOSE_DEV) run --rm web ruff check --fix .
+> $(COMPOSE_DEV) run --rm web ruff format .
 
 dev-shell: ## Open the Django shell in the development container
 > $(COMPOSE_DEV) run --rm web python backend/manage.py shell
@@ -68,11 +73,11 @@ test: ## Run the test suite
 
 lint: ## Check linting and formatting
 > ruff check .
-> black --check .
+> ruff format --check .
 
 fmt: ## Auto-fix linting and formatting
 > ruff check --fix .
-> black .
+> ruff format .
 
 collectstatic: ## Collect static files
 > $(MANAGE) collectstatic --noinput
