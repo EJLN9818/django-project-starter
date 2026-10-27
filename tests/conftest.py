@@ -46,6 +46,8 @@ def copier_copy(tmp_path: Path):
             defaults=defaults,
             unsafe=True,
             quiet=True,
+            # Test the current commit, not the latest release tag.
+            vcs_ref="HEAD",
         )
         return dest
 

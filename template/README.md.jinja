@@ -96,17 +96,19 @@ python backend/manage.py runserver
 {%- if database == 'postgresql' %}
 
 `.env.example` uses `DEBUG=True` and `DB_HOST=localhost`, so PostgreSQL works
-with a local server. Docker Compose overrides `DEBUG=False` and `DB_HOST=db`.
+with a local server. The production-like Compose stack overrides `DEBUG=False`
+and `DB_HOST=db`; the development overlay keeps `DB_HOST=db` but sets
+`DEBUG=True`.
 {%- else %}
 
-`.env.example` uses `DEBUG=True` for local development. Docker Compose
-overrides it to `DEBUG=False`.
+`.env.example` uses `DEBUG=True` for local development. The development overlay
+keeps it enabled; the production-like Compose stack sets `DEBUG=False`.
 {%- endif %}
 
 Create an admin user:
 
 ```bash
-# Docker-only workflow
+# Docker-only workflow (or: make dev-manage CMD=createsuperuser)
 docker compose -f docker-compose.yml -f compose.dev.yml run --rm web \
   python backend/manage.py createsuperuser
 
@@ -127,6 +129,7 @@ make dev-down    # stop the development stack
 make dev-test    # pytest inside the development container
 make dev-lint    # ruff + black inside the development container
 make dev-shell   # Django shell inside the development container
+make dev-manage  # Django command, e.g. make dev-manage CMD=createsuperuser
 make up          # production-like Docker stack in the background
 make down        # stop the production-like stack
 make migrate     # apply migrations with the local venv

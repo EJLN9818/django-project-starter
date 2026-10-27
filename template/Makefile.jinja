@@ -9,7 +9,7 @@ COMPOSE_DEV = $(COMPOSE) -f docker-compose.yml -f compose.dev.yml
 .RECIPEPREFIX = >
 
 .PHONY: help up down build logs ps dev dev-down dev-test dev-lint dev-shell \
-        migrate makemigrations shell dbshell superuser test lint fmt collectstatic
+        dev-manage migrate makemigrations shell dbshell superuser test lint fmt collectstatic
 
 help: ## Show this help
 > @grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -44,6 +44,9 @@ dev-lint: ## Check linting and formatting in the development container
 
 dev-shell: ## Open the Django shell in the development container
 > $(COMPOSE_DEV) run --rm web python backend/manage.py shell
+
+dev-manage: ## Run a Django command in the development container (CMD=...)
+> $(COMPOSE_DEV) run --rm web python backend/manage.py $(CMD)
 
 migrate: ## Apply database migrations
 > $(MANAGE) migrate

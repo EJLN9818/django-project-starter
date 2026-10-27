@@ -125,7 +125,7 @@ use a git URL as the template source.
 ### Releases
 
 Tag stable versions of the template (for example
-`git tag v1.0.0 && git push --tags`) so `copier update` uses a deterministic
+`git tag v1.1.0 && git push --tags`) so `copier update` uses a deterministic
 version instead of the current `HEAD`.
 
 ### Secrets

@@ -329,6 +329,7 @@ def test_docker_dev_workflow(copier_copy, database):
     assert "dev:" in makefile
     assert "dev-test:" in makefile
     assert "dev-lint:" in makefile
+    assert "dev-manage:" in makefile
 
     readme = (dest / "README.md").read_text()
     assert "compose.dev.yml" in readme
